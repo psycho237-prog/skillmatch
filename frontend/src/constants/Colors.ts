@@ -1,0 +1,48 @@
+// SkillMatch Design Tokens — follows design.pdf exactly
+export const Colors = {
+  light: {
+    primary: '#0061FF',
+    primaryLight: 'rgba(0, 97, 255, 0.10)',
+    primaryUltraLight: 'rgba(0, 97, 255, 0.04)',
+    black1: '#191D31',
+    black2: '#666876',
+    black3: '#8C8E98',
+    white: '#FFFFFF',
+    background: '#FFFFFF',
+    card: '#F7F7F7',
+    border: '#E8E8E8',
+    danger: '#F75555',
+    success: '#4CAF50',
+    warning: '#FF9800',
+    star: '#FFB800',
+    inputBg: '#F5F5F5',
+    shadow: 'rgba(0, 0, 0, 0.08)',
+    overlay: 'rgba(0, 0, 0, 0.5)',
+    tabBar: '#FFFFFF',
+    tabBarBorder: '#E8E8E8',
+  },
+  dark: {
+    primary: '#0061FF',
+    primaryLight: 'rgba(0, 97, 255, 0.20)',
+    primaryUltraLight: 'rgba(0, 97, 255, 0.08)',
+    black1: '#FFFFFF',
+    black2: '#B0B0B8',
+    black3: '#8C8E98',
+    white: '#1A1A2E',
+    background: '#0F0F23',
+    card: '#1A1A2E',
+    border: '#2A2A3E',
+    danger: '#F75555',
+    success: '#4CAF50',
+    warning: '#FF9800',
+    star: '#FFB800',
+    inputBg: '#1A1A2E',
+    shadow: 'rgba(0, 0, 0, 0.3)',
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    tabBar: '#1A1A2E',
+    tabBarBorder: '#2A2A3E',
+  },
+};
+
+export type ThemeName = 'light' | 'dark';
+export type ColorScheme = typeof Colors.light;

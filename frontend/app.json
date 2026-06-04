@@ -1,0 +1,80 @@
+{
+  "expo": {
+    "name": "SkillMatch",
+    "slug": "skillmatch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "skillmatch",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skillmatch.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SkillMatch needs camera access to take photos for your service listings.",
+        "NSPhotoLibraryUsageDescription": "SkillMatch needs photo library access to upload images for your service listings.",
+        "NSLocationWhenInUseUsageDescription": "SkillMatch needs your location to show nearby services.",
+        "NSLocationAlwaysUsageDescription": "SkillMatch uses your location to recommend nearby services."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.skillmatch.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SkillMatch to access your camera for service photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow SkillMatch to access your photos for service listings."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SkillMatch to use your location to find nearby services."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0061FF"
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
