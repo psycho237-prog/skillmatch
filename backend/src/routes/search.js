@@ -56,7 +56,7 @@ function expandSearchTerms(searchQuery) {
 // POST /api/search - Intelligent contextual search
 router.post('/', async (req, res) => {
   try {
-    const { query: searchQuery, category, min_price, max_price, location, limit = 20, offset = 0 } = req.body;
+    const { query: searchQuery, category, min_price, max_price, location, limit = 20, offset = 0, user_id } = req.body;
 
     if (!searchQuery || searchQuery.trim().length === 0) {
       return res.status(400).json({ error: 'Search query is required' });
@@ -66,13 +66,15 @@ router.post('/', async (req, res) => {
     
     let sql = `
       SELECT s.*, 
-             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users,
+             (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
+             EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s
       JOIN users u ON s.user_id = u.id
       WHERE s.is_active = true
     `;
-    const params = [];
-    let paramCount = 1;
+    const params = [user_id || null];
+    let paramCount = 2;
 
     // Build ILIKE conditions
     if (expandedTerms.length > 0) {

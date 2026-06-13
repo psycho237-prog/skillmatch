@@ -10,12 +10,15 @@ export interface ServiceCardProps {
   title: string;
   price: number;
   priceType: 'fixed' | 'hourly' | 'negotiable' | 'exchange';
+  currency?: string;
   location: string;
   rating: number;
   imageUrl: string;
   isFeatured?: boolean;
   style?: ViewStyle;
   variant?: 'horizontal' | 'vertical';
+  isFavorited?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export const ServiceCard = ({
@@ -23,12 +26,15 @@ export const ServiceCard = ({
   title,
   price,
   priceType,
+  currency = 'USD',
   location,
   rating,
   imageUrl,
   isFeatured,
   style,
   variant = 'vertical',
+  isFavorited,
+  onToggleFavorite,
 }: ServiceCardProps) => {
   const { colors, t } = useApp();
   const router = useRouter();
@@ -37,11 +43,24 @@ export const ServiceCard = ({
     router.push(`/service/${id}`);
   };
 
+  const getCurrencySymbol = (code: string) => {
+    const symbols: Record<string, string> = {
+      'USD': '$', 'EUR': '€', 'XAF': 'FCFA', 'GBP': '£', 'CNY': '¥', 'RUB': '₽'
+    };
+    return symbols[code] || code;
+  };
+
   const formatPrice = () => {
     if (priceType === 'exchange') return t('exchange');
     if (priceType === 'negotiable') return t('negotiable');
+    
+    const symbol = getCurrencySymbol(currency);
     const suffix = priceType === 'hourly' ? t('per_hour') : '';
-    return `$${price}${suffix}`;
+    
+    if (currency === 'XAF') {
+      return `${price}${suffix} ${symbol}`;
+    }
+    return `${symbol}${price}${suffix}`;
   };
 
   if (variant === 'horizontal') {
@@ -58,11 +77,17 @@ export const ServiceCard = ({
             {location}
           </Typography>
           <View style={styles.footer}>
-            <Typography variant="h6" color={colors.primary}>
+            <Typography variant="h6" color={colors.primary} numberOfLines={1} style={{ flex: 1 }}>
               {formatPrice()}
             </Typography>
-            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Image source={icons.heart} style={[styles.heartIcon, { tintColor: colors.black3 }]} />
+            <TouchableOpacity 
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={(e) => {
+                e.stopPropagation();
+                onToggleFavorite?.();
+              }}
+            >
+              <Image source={isFavorited ? icons.heartFilled : icons.heart} style={[styles.heartIcon, { tintColor: isFavorited ? colors.pink : colors.black3 }]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -82,7 +107,6 @@ export const ServiceCard = ({
       onPress={handlePress}
     >
       <Image source={{ uri: imageUrl }} style={styles.vImage} />
-      {/* Overlay gradient would go here, simulating with view */}
       <View style={styles.vOverlay}>
         <View  style={[styles.vRatingBadge, { backgroundColor: colors.bg_rating }]}>
           <Image source={icons.star} style={styles.starIcon} />
@@ -95,11 +119,17 @@ export const ServiceCard = ({
             {location}
           </Typography>
           <View style={styles.footer}>
-            <Typography variant="h4" color="#FFF">
+            <Typography variant="h4" color="#FFF" numberOfLines={1} style={{ flex: 1 }}>
               {formatPrice()}
             </Typography>
-            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Image source={icons.heart} style={[styles.heartIcon, { tintColor: '#FFF' }]} />
+            <TouchableOpacity 
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={(e) => {
+                e.stopPropagation();
+                onToggleFavorite?.();
+              }}
+            >
+              <Image source={isFavorited ? icons.heartFilled : icons.heart} style={[styles.heartIcon, { tintColor: isFavorited ? colors.pink : '#FFF' }]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,14 +202,13 @@ const styles = StyleSheet.create({
   },
   vOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Simulating gradient from bottom
+    backgroundColor: 'rgba(0,0,0,0.3)', 
     padding: 16,
     justifyContent: 'space-between',
   },
   vRatingBadge: {
     alignSelf: 'flex-end',
-    color: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,

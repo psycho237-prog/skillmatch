@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Share, Linking, Modal, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../src/services/api';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,9 @@ import { icons } from '../../src/constants';
 export default function Profile() {
   const { colors, t, user, setUser, themePreference, setThemePreference, language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useApp();
   const router = useRouter();
+  
+  const [langModalVisible, setLangModalVisible] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -20,16 +23,26 @@ export default function Profile() {
     });
 
     if (!result.canceled) {
+      const userId = user?.id;
+      if (!userId) {
+        alert(t('login_required'));
+        return;
+      }
+
       try {
         const uri = result.assets[0].uri;
-        const updatedUser = { ...user, avatar_url: uri };
-        await setUser(updatedUser as any, undefined);
+        const uploadRes = await api.uploadImages([uri]);
+        const serverUrl = uploadRes.urls[0];
+
+        // 1. Update on server
+        const updateRes = await api.updateUser(userId, { avatar_url: serverUrl });
         
-        if (user && user.id) {
-          await api.updateUser(user.id, { avatar_url: uri });
-        }
-      } catch (e) {
-        console.error('Failed to update avatar on server', e);
+        // 2. Update local state with fresh data from server
+        await setUser(updateRes.user, undefined);
+        
+      } catch (e: any) {
+        console.error('Failed to update avatar', e);
+        alert('Upload failed: ' + e.message);
       }
     }
   };
@@ -39,14 +52,19 @@ export default function Profile() {
     router.replace('/(auth)/welcome');
   };
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'fr' : 'en');
+  const handleInvite = async () => {
+    try {
+      await Share.share({
+        message: 'Join me on SkillMatch! ' + 'skillmatch.bridge.dev',
+        url: 'https://skillmatch.bridge.dev', // iOS
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const toggleTheme = () => {
-    if (themePreference === 'system') setThemePreference('dark');
-    else if (themePreference === 'dark') setThemePreference('light');
-    else setThemePreference('system');
+  const handleHelp = () => {
+    Linking.openURL('https://skillmatch.bridge.dev/help');
   };
 
   const getThemeText = () => {
@@ -56,7 +74,15 @@ export default function Profile() {
   };
 
   const getLangText = () => {
-    return language === 'en' ? t('english') : t('french');
+    const langs: Record<string, string> = {
+      en: t('english'),
+      fr: t('french'),
+      de: t('german'),
+      zh: t('chinese'),
+      es: t('spanish'),
+      ru: t('russian')
+    };
+    return langs[language] || t('english');
   };
 
   const menuItems = [
@@ -73,17 +99,17 @@ export default function Profile() {
     { 
       icon: icons.language, 
       title: t('language'), 
-      action: toggleLanguage,
+      action: () => setLangModalVisible(true),
       rightText: getLangText()
     },
     { 
       icon: icons.edit, // Reusing an icon for theme toggle mock
       title: t('theme'), 
-      action: toggleTheme,
+      action: () => setThemeModalVisible(true),
       rightText: getThemeText()
     },
-    { icon: icons.info, title: t('help_center'), action: () => {} },
-    { icon: icons.people, title: t('invite_friends'), action: () => {} },
+    { icon: icons.info, title: t('help_center'), action: handleHelp },
+    { icon: icons.people, title: t('invite_friends'), action: handleInvite },
   ];
 
   return (
@@ -143,7 +169,66 @@ export default function Profile() {
         </View>
 
       </ScrollView>
+
+      {/* Language Modal */}
+      <SelectionModal 
+        visible={langModalVisible} 
+        onClose={() => setLangModalVisible(false)} 
+        title={t('language')}
+        options={[
+          { label: t('english'), value: 'en' },
+          { label: t('french'), value: 'fr' },
+          { label: t('german'), value: 'de' },
+          { label: t('chinese'), value: 'zh' },
+          { label: t('spanish'), value: 'es' },
+          { label: t('russian'), value: 'ru' }
+        ]}
+        selectedValue={language}
+        onSelect={(val: string) => {
+          setLanguage(val as any);
+          setLangModalVisible(false);
+        }}
+        colors={colors}
+      />
+
+      {/* Theme Modal */}
+      <SelectionModal 
+        visible={themeModalVisible} 
+        onClose={() => setThemeModalVisible(false)} 
+        title={t('theme')}
+        options={[
+          { label: t('theme_light'), value: 'light' },
+          { label: t('theme_dark'), value: 'dark' },
+          { label: t('theme_system'), value: 'system' }
+        ]}
+        selectedValue={themePreference}
+        onSelect={(val: string) => {
+          setThemePreference(val as any);
+          setThemeModalVisible(false);
+        }}
+        colors={colors}
+      />
     </View>
+  );
+}
+
+function SelectionModal({ visible, onClose, title, options, selectedValue, onSelect, colors }: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <Typography variant="h4" style={styles.modalTitle}>{title}</Typography>
+          {options.map((opt: any) => (
+            <TouchableOpacity key={opt.value} style={styles.radioItem} onPress={() => onSelect(opt.value)}>
+              <Typography variant="h6" color={selectedValue === opt.value ? colors.primary : colors.black1}>{opt.label}</Typography>
+              <View style={[styles.radioOuter, { borderColor: selectedValue === opt.value ? colors.primary : colors.black3 }]}>
+                {selectedValue === opt.value && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -219,5 +304,42 @@ const styles = StyleSheet.create({
   },
   rightText: {
     marginRight: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 24,
+  },
+  modalTitle: {
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  radioItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  radioOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   }
 });

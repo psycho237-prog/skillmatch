@@ -20,17 +20,17 @@ async function seed() {
   console.log('Seeding users...');
   const user1 = (await pool.query(
     'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['1234567890', passwordHash, 'Alice Smith', 'https://randomuser.me/api/portraits/women/44.jpg']
+    ['1234567890', passwordHash, 'Alice Smith', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/13e5945d8e3e96bec4da657ebd8a187839148c75']
   )).rows[0];
 
   const user2 = (await pool.query(
     'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['0987654321', passwordHash, 'Bob Builder', 'https://randomuser.me/api/portraits/men/32.jpg']
+    ['0987654321', passwordHash, 'Bob Builder', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1ae504e2d55428c2a94076622fe8ddd6d8d8476d']
   )).rows[0];
 
   const user3 = (await pool.query(
     'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['5555555555', passwordHash, 'Charlie Design', 'https://randomuser.me/api/portraits/men/21.jpg']
+    ['5555555555', passwordHash, 'Charlie Design', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
   )).rows[0];
 
   console.log('Seeding services...');
@@ -39,7 +39,7 @@ async function seed() {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       user1.id, 
-      'Expert Web Developer', 
+      'Bitch Web Developer', 
       'I can build scalable, responsive web applications using React, Node.js, and PostgreSQL. With over 5 years of professional experience, I bring your ideas to life.', 
       'Development', 
       45.00, 
@@ -49,7 +49,7 @@ async function seed() {
       true, 
       4.9, 
       24, 
-      ['https://images.unsplash.com/photo-1498050108023-c5249f4df085']
+      ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png']
     ]
   );
 
@@ -68,7 +68,7 @@ async function seed() {
       true, 
       4.7, 
       12, 
-      ['https://images.unsplash.com/photo-1542013936693-884638332954']
+      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
     ]
   );
 
@@ -87,7 +87,7 @@ async function seed() {
       false, 
       5.0, 
       38, 
-      ['https://images.unsplash.com/photo-1561070791-2526d30994b5']
+      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
     ]
   );
 

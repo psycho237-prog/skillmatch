@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   notification_enabled BOOLEAN DEFAULT true,
   language TEXT DEFAULT 'en',
   theme TEXT DEFAULT 'system',
+  push_token TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   last_login TIMESTAMPTZ DEFAULT NOW()

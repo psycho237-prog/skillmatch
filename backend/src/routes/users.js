@@ -5,7 +5,7 @@ const { query } = require('../config/database');
 // GET /api/users/:id - Get user profile
 router.get('/:id', async (req, res) => {
   try {
-    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, language, theme, created_at FROM users WHERE id = $1', [req.params.id]);
+    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, language, theme, push_token, created_at FROM users WHERE id = $1', [req.params.id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -46,6 +46,10 @@ router.put('/:id', async (req, res) => {
       updates.push(`theme = $${paramCount++}`);
       params.push(theme);
     }
+    if (req.body.push_token !== undefined) {
+      updates.push(`push_token = $${paramCount++}`);
+      params.push(req.body.push_token);
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
@@ -54,7 +58,7 @@ router.put('/:id', async (req, res) => {
     updates.push(`updated_at = NOW()`);
 
     params.push(req.params.id);
-    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme`;
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme, push_token`;
 
     const { rows } = await query(sql, params);
 

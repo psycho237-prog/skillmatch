@@ -1,4 +1,5 @@
 const images = {
+  auth: require('../../assets/images/onboarding.png'),
   avatar: require('../../assets/images/avatar.png'),
   barChart: require('../../assets/images/bar-chart.png'),
   cardGradient: require('../../assets/images/card-gradient.png'),
@@ -9,6 +10,7 @@ const images = {
   newYork: require('../../assets/images/new-york.png'),
   noResult: require('../../assets/images/no-result.png'),
   onboarding: require('../../assets/images/onboarding.png'),
+  onboarding_dark: require('../../assets/images/onboarding_dark.png'),
   splashIcon: require('../../assets/images/splash-icon.png'),
   splash: require('../../assets/images/splash.png'),
   whiteGradient: require('../../assets/images/white-gradient.png'),

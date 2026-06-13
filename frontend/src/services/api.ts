@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import ENV from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -62,21 +63,32 @@ class ApiService {
   }
 
   // Services
-  async getServices(params?: Record<string, string>) {
-    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  async getServices(params?: Record<string, string>, userId?: string) {
+    const allParams = { ...params };
+    if (userId) allParams.user_id = userId;
+    const query = Object.keys(allParams).length > 0 ? '?' + new URLSearchParams(allParams).toString() : '';
     return this.request(`/services${query}`);
   }
 
-  async getFeaturedServices() {
-    return this.request('/services/featured');
+  async getFeaturedServices(userId?: string) {
+    const query = userId ? `?user_id=${userId}` : '';
+    return this.request(`/services/featured${query}`);
   }
 
   async getCategories() {
     return this.request('/services/categories');
   }
 
-  async getServiceById(id: string) {
-    return this.request(`/services/${id}`);
+  async getServiceById(id: string, userId?: string) {
+    const query = userId ? `?user_id=${userId}` : '';
+    return this.request(`/services/${id}${query}`);
+  }
+
+  async toggleFavorite(serviceId: string, userId: string) {
+    return this.request(`/services/${serviceId}/favorite`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    });
   }
 
   async createService(service: any) {
@@ -104,11 +116,59 @@ class ApiService {
     });
   }
 
+  // Upload - Multi-image upload via FormData
+  async uploadImages(imageUris: string[]): Promise<{ urls: string[]; count: number }> {
+    const url = `${this.baseUrl}/upload`;
+    const token = await this.getToken();
+
+    const formData = new FormData();
+    
+    // Process images
+    await Promise.all(imageUris.map(async (uri, index) => {
+      const filename = uri.split('/').pop() || `image_${index}.jpg`;
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('images', blob, filename);
+      } else {
+        formData.append('images', {
+          uri,
+          name: filename,
+          type,
+        } as any);
+      }
+    }));
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error(`Upload Error:`, error.message);
+      throw error;
+    }
+  }
+
   // Search
-  async searchServices(query: string, filters?: Record<string, any>) {
+  async searchServices(query: string, filters?: Record<string, any>, userId?: string) {
     return this.request('/search', {
       method: 'POST',
-      body: JSON.stringify({ query, ...filters }),
+      body: JSON.stringify({ query, ...filters, user_id: userId }),
     });
   }
 
@@ -155,6 +215,10 @@ class ApiService {
 
   async getUserServices(userId: string) {
     return this.request(`/users/${userId}/services`);
+  }
+
+  async updateUserPushToken(userId: string, token: string) {
+    return this.updateUser(userId, { push_token: token });
   }
 }
 

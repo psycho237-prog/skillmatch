@@ -14,6 +14,7 @@ const icons = {
   filter: require('../../assets/icons/filter.png'),
   google: require('../../assets/icons/google.png'),
   heart: require('../../assets/icons/heart.png'),
+  heartFilled: require('../../assets/icons/heart-filled.png'),
   home: require('../../assets/icons/home.png'),
   info: require('../../assets/icons/info.png'),
   language: require('../../assets/icons/language.png'),

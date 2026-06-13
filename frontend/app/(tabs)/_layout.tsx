@@ -52,13 +52,11 @@ export default function TabLayout() {
           title: t('explore'),
           tabBarLabel: 'Explore',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeIconWrapper : undefined}>
-              <Image
-                source={icons.search}
-                style={[styles.icon, { tintColor: focused ? colors.white : color }]}
-                resizeMode="contain"
-              />
-            </View>
+            <Image
+              source={icons.search}
+              style={[styles.icon, { tintColor: color }]}
+              resizeMode="contain"
+            />
           ),
         }}
       />
@@ -98,19 +96,5 @@ const styles = StyleSheet.create({
   icon: {
     width: 24,
     height: 24,
-  },
-  activeIconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#0061FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: -20,
-    shadowColor: '#0061FF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
   },
 });

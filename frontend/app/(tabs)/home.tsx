@@ -19,7 +19,7 @@ export default function Home() {
   const { colors, t, user } = useApp();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [featured, setFeatured] = useState<any[]>([]);
   const [recommended, setRecommended] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -35,8 +35,8 @@ export default function Home() {
       setLoading(true);
       // Run queries in parallel
       const [featRes, recRes, catRes] = await Promise.all([
-        api.getFeaturedServices(),
-        api.getServices(activeCategory !== 'All' ? { category: activeCategory } : undefined),
+        api.getFeaturedServices(user?.id),
+        api.getServices(activeCategory !== 'All' ? { category: activeCategory } : undefined, user?.id),
         api.getCategories()
       ]);
 
@@ -45,26 +45,6 @@ export default function Home() {
       setCategories([{ name: 'All' }, ...(catRes.categories || [])]);
     } catch (e) {
       console.error(e);
-      // fallback mock data for visually developing immediately if backend is empty
-      setCategories([{name: 'All'}, {name: 'Development'}, {name: 'Design'}, {name: 'Writing'}]);
-      setFeatured([{
-        id: '1', title: 'Full-Stack Web Dev', price: 75, price_type: 'hourly', location: 'San Francisco', rating: 4.8, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-      },
-      {id: '2', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    },
-      {id: '3', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    }]);
-      setRecommended([{
-        id: '4', title: 'UI/UX Design', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800']
-      },
-      {id: '5', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    },
-      {id: '6', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    },
-      {id: '7', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    },
-      {id: '8', title: 'BG', price: 90, price_type: 'hourly', location: 'Tokyo', rating: 4.9, images: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800']
-    }]);
     } finally {
       setLoading(false);
     }
@@ -76,16 +56,49 @@ export default function Home() {
     }
   };
 
+  const handleToggleFavorite = async (serviceId: string) => {
+    if (!user) {
+      alert(t('login_required'));
+      return;
+    }
+
+    // Optimistic Update
+    const updater = (list: any[]) => list.map(item => {
+      if (item.id === serviceId) {
+        const currentlyFavorited = !!item.is_favorited;
+        return {
+          ...item,
+          is_favorited: !currentlyFavorited,
+          likes_count: Number(item.likes_count || 0) + (currentlyFavorited ? -1 : 1)
+        };
+      }
+      return item;
+    });
+
+    setFeatured(prev => updater(prev));
+    setRecommended(prev => updater(prev));
+
+    try {
+      await api.toggleFavorite(serviceId, user.id);
+      // Optional: re-fetch to ensure sync, but the local update should be enough
+      // fetchData(); 
+    } catch (e) {
+      console.error(e);
+      // Rollback on error
+      fetchData();
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        
+
         {/* Header Profile Area */}
         <View style={styles.header}>
           <View style={styles.profileInfo}>
-            <Image 
-              source={{ uri: user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+              style={styles.avatar}
             />
             <View style={styles.greeting}>
               <Typography variant="caption" color={colors.black3}>{t('good_morning')}</Typography>
@@ -135,10 +148,13 @@ export default function Home() {
                   title={item.title}
                   location={item.location}
                   price={item.price}
+                  currency={item.currency}
                   priceType={item.price_type}
                   rating={item.rating}
                   imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
                   variant="vertical"
+                  isFavorited={!!item.is_favorited}
+                  onToggleFavorite={() => handleToggleFavorite(item.id)}
                 />
               ))}
             </ScrollView>
@@ -154,7 +170,7 @@ export default function Home() {
                 <Typography variant="body2" color={colors.primary} weight="medium">{t('see_all')}</Typography>
               </TouchableOpacity>
             </View>
-            
+
             {/* Category Pills */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
               {categories.map((cat, idx) => {
@@ -168,9 +184,9 @@ export default function Home() {
                     ]}
                     onPress={() => setActiveCategory(cat.name)}
                   >
-                    <Typography 
-                      variant="body2" 
-                      weight="medium" 
+                    <Typography
+                      variant="body2"
+                      weight="medium"
                       color={isActive ? '#FFF' : colors.black2}
                     >
                       {t((cat.name.toLowerCase()) as any) || cat.name}
@@ -189,12 +205,15 @@ export default function Home() {
                   title={item.title}
                   location={item.location}
                   price={item.price}
+                  currency={item.currency}
                   priceType={item.price_type}
                   rating={item.rating}
                   imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
                   variant="horizontal"
+                  isFavorited={!!item.is_favorited}
+                  onToggleFavorite={() => handleToggleFavorite(item.id)}
                 />
-                
+
               ))}
             </View>
           </View>
@@ -218,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 18,
-    marginTop:-20,
+    marginTop: -20,
   },
   profileInfo: {
     flexDirection: 'row',
@@ -305,6 +324,6 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent:'space-between',
+    justifyContent: 'space-between',
   },
 });

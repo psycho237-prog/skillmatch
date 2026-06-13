@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   notification_enabled BOOLEAN DEFAULT true,
   language TEXT DEFAULT 'en',
   theme TEXT DEFAULT 'system',
+  push_token TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   last_login TIMESTAMPTZ DEFAULT NOW()
@@ -34,6 +35,8 @@ CREATE TABLE IF NOT EXISTS services (
   category TEXT NOT NULL,
   price DECIMAL(10,2) DEFAULT 0,
   price_type TEXT DEFAULT 'negotiable', -- 'fixed', 'hourly', 'negotiable', 'exchange'
+  currency TEXT DEFAULT 'USD',
+  barter_skill TEXT,
   location TEXT,
   latitude DECIMAL(10,7),
   longitude DECIMAL(10,7),

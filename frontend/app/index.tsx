@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Image, StyleSheet, Animated } from 'react-native';
+import { View, Image,Text, StyleSheet, Animated } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useApp } from '../src/contexts/AppContext';
 import { images } from '../src/constants';
 
+
 export default function Index() {
-  const { isLoggedIn, theme } = useApp();
+  const { isLoggedIn, theme,colors } = useApp();
   const [isReady, setIsReady] = useState(false);
   const fadeAnim = new Animated.Value(0);
   const router = useRouter();
@@ -30,11 +31,7 @@ export default function Index() {
           style={[styles.image, { opacity: fadeAnim }]}
           resizeMode="cover"
         />
-        <Animated.Image
-          source={images.splashIcon}
-          style={[styles.icon, { opacity: fadeAnim }]}
-          resizeMode="contain"
-        />
+        <Text style={{color: colors.primary}}>SkillMatch</Text>
       </View>
     );
   }
@@ -42,7 +39,7 @@ export default function Index() {
   if (isLoggedIn) {
     return <Redirect href="/(tabs)/home" />;
   } else {
-    return <Redirect href="/(tabs)/home" />;
+    return <Redirect href="/(auth)/welcome" />;
   }
 }
 

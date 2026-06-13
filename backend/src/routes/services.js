@@ -5,17 +5,19 @@ const { query } = require('../config/database');
 // GET /api/services - Get all services with optional filters
 router.get('/', async (req, res) => {
   try {
-    const { category, min_price, max_price, location, sort, limit = 20, offset = 0 } = req.query;
+    const { category, min_price, max_price, location, sort, limit = 20, offset = 0, user_id } = req.query;
 
     let sql = `
       SELECT s.*, 
-             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users,
+             (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
+             EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s
       JOIN users u ON s.user_id = u.id
       WHERE s.is_active = true
     `;
-    const params = [];
-    let paramCount = 1;
+    const params = [user_id || null];
+    let paramCount = 2;
 
     if (category && category !== 'All') {
       sql += ` AND s.category = $${paramCount++}`;
@@ -65,15 +67,18 @@ router.get('/', async (req, res) => {
 // GET /api/services/featured - Get featured services
 router.get('/featured', async (req, res) => {
   try {
+    const { user_id } = req.query;
     const { rows } = await query(`
       SELECT s.*, 
-             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users,
+             (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
+             EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s
       JOIN users u ON s.user_id = u.id
       WHERE s.is_active = true AND s.is_featured = true
-      ORDER BY s.rating DESC
+      ORDER BY (s.rating * 0.7 + (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) * 0.3) DESC
       LIMIT 10
-    `);
+    `, [user_id || null]);
 
     res.json({ services: rows });
   } catch (error) {
@@ -97,11 +102,13 @@ router.get('/:id', async (req, res) => {
   try {
     const serviceRes = await query(`
       SELECT s.*, 
-             json_build_object('id', u.id, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'phone_number', u.phone_number) as users
+             json_build_object('id', u.id, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'phone_number', u.phone_number) as users,
+             (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
+             EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $2) as is_favorited
       FROM services s
       JOIN users u ON s.user_id = u.id
       WHERE s.id = $1
-    `, [req.params.id]);
+    `, [req.params.id, req.query.user_id || null]);
 
     if (serviceRes.rows.length === 0) {
       return res.status(404).json({ error: 'Service not found' });
@@ -132,6 +139,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       user_id, title, description, category, price, price_type,
+      currency, barter_skill,
       location, latitude, longitude, images, tags
     } = req.body;
 
@@ -142,23 +150,32 @@ router.post('/', async (req, res) => {
     const insertSql = `
       INSERT INTO services (
         user_id, title, description, category, price, price_type,
+        currency, barter_skill,
         location, latitude, longitude, images, tags,
         rating, review_count, is_active, is_featured, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, true, false, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, true, false, NOW(), NOW()
       ) RETURNING *
     `;
 
+    const effectivePriceType = price_type || 'negotiable';
+
     const params = [
-      user_id, title, description, category, price || 0, price_type || 'negotiable',
-      location || '', latitude || null, longitude || null, images || '{}', tags || '{}'
+      user_id, title, description, category,
+      effectivePriceType === 'exchange' ? 0 : (price || 0),
+      effectivePriceType,
+      currency || 'USD',
+      barter_skill || null,
+      location || '', latitude || null, longitude || null,
+      images || '{}', tags || '{}'
     ];
 
     const { rows } = await query(insertSql, params);
+    const service = rows[0];
 
-    console.log(`[SERVICE ADDED] ID: ${rows[0].id} | Title: ${rows[0].title} | User: ${rows[0].user_id}`);
+    console.log(`[SERVICE ADDED] ID: ${service.id} | Title: ${service.title} | Type: ${effectivePriceType} | Currency: ${service.currency}`);
 
-    res.status(201).json({ service: rows[0] });
+    res.status(201).json({ service });
   } catch (error) {
     console.error('Create service error:', error);
     res.status(500).json({ error: 'Failed to create service' });
@@ -205,6 +222,35 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Service deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete service' });
+  }
+});
+
+// POST /api/services/:id/favorite - Toggle favorite
+router.post('/:id/favorite', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'User ID required' });
+
+    // Optimized atomic toggle
+    const deleteRes = await query('DELETE FROM favorites WHERE user_id = $1 AND service_id = $2', [user_id, req.params.id]);
+
+    if (deleteRes.rowCount > 0) {
+      res.json({ favorited: false, message: 'Removed from favorites' });
+    } else {
+      try {
+        await query('INSERT INTO favorites (user_id, service_id) VALUES ($1, $2)', [user_id, req.params.id]);
+        res.json({ favorited: true, message: 'Added to favorites' });
+      } catch (insertError) {
+        if (insertError.code === '23505') {
+           res.json({ favorited: true, message: 'Already favorited' });
+        } else {
+           throw insertError;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Favorite error:', error);
+    res.status(500).json({ error: 'Failed to toggle favorite' });
   }
 });
 

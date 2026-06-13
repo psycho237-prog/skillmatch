@@ -9,7 +9,7 @@ import { api } from '../../src/services/api';
 
 export default function Explore() {
   const { q } = useLocalSearchParams();
-  const { colors, t } = useApp();
+  const { colors, t, user } = useApp();
   const router = useRouter();
 
   const [query, setQuery] = useState((q as string) || '');
@@ -36,16 +36,43 @@ export default function Explore() {
     try {
       setLoading(true);
       if (!qToUse.trim()) {
-         const res = await api.getServices({ category: cToUse });
+         const res = await api.getServices({ category: cToUse }, user?.id);
          setResults(res.services || []);
       } else {
-         const res = await api.searchServices(qToUse, { category: cToUse });
+         const res = await api.searchServices(qToUse, { category: cToUse }, user?.id);
          setResults(res.services || []);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async (serviceId: string) => {
+    if (!user) {
+      alert(t('login_required'));
+      return;
+    }
+
+    // Optimistic Update
+    setResults(prev => prev.map(item => {
+      if (item.id === serviceId) {
+        const currentlyFavorited = !!item.is_favorited;
+        return { 
+          ...item, 
+          is_favorited: !currentlyFavorited,
+          likes_count: Number(item.likes_count || 0) + (currentlyFavorited ? -1 : 1)
+        };
+      }
+      return item;
+    }));
+
+    try {
+      await api.toggleFavorite(serviceId, user.id);
+    } catch (e) {
+      console.error(e);
+      handleSearch(); // Rollback
     }
   };
 
@@ -109,10 +136,13 @@ export default function Explore() {
             title={item.title}
             location={item.location}
             price={item.price}
+            currency={item.currency}
             priceType={item.price_type}
             rating={item.rating}
             imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
             variant="horizontal"
+            isFavorited={!!item.is_favorited}
+            onToggleFavorite={() => handleToggleFavorite(item.id)}
           />
         ))}
         {results.length === 0 && !loading && (

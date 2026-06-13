@@ -3,6 +3,7 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations, Language, TranslationKey } from '../i18n/translations';
 import { Colors, ThemeName, ColorScheme } from '../constants/Colors';
+import { registerForPushNotificationsAsync, setupNotificationHandlers } from '../services/notifications';
 
 interface User {
   id: string;
@@ -25,6 +26,7 @@ interface AppContextType {
   theme: ThemeName;
   themePreference: 'system' | 'light' | 'dark';
   setThemePreference: (pref: 'system' | 'light' | 'dark') => void;
+  setTheme: (pref: 'system' | 'light' | 'dark') => void; // Alias
   colors: ColorScheme;
 
   // Language
@@ -35,6 +37,8 @@ interface AppContextType {
   // Notifications
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+
+  initialized: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -60,6 +64,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (initialized && user && notificationsEnabled) {
+      registerForPushNotificationsAsync(user.id);
+      return setupNotificationHandlers();
+    }
+  }, [user, initialized, notificationsEnabled]);
 
   const loadSettings = async () => {
     try {
@@ -143,12 +154,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme,
         themePreference,
         setThemePreference,
+        setTheme: setThemePreference, // Alias
         colors,
         language,
         setLanguage,
         t,
         notificationsEnabled,
         setNotificationsEnabled,
+        initialized,
       }}
     >
       {children}
