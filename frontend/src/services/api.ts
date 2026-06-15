@@ -58,10 +58,17 @@ class ApiService {
     });
   }
 
-  async registerWithPhone(phone_number: string, password: string, display_name: string) {
+  async sendOtp(phone_number: string) {
+    return this.request('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone_number }),
+    });
+  }
+
+  async registerWithPhone(phone_number: string, password: string, display_name: string, otp_code: string) {
     return this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ phone_number, password, display_name }),
+      body: JSON.stringify({ phone_number, password, display_name, otp_code }),
     });
   }
 

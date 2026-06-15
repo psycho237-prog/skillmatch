@@ -1,0 +1,6 @@
+{
+  "ignore": [
+    "baileys_store/*",
+    "**/baileys_store/**"
+  ]
+}

@@ -14,3 +14,41 @@
 2026-06-15 12:51:14.796 WAT [31761] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.133 s, sync=0.097 s, total=1.377 s; sync files=9, longest=0.080 s, average=0.011 s; distance=6 kB, estimate=4087 kB; lsn=0/195A3F0, redo lsn=0/195A3B8
 2026-06-15 12:56:13.902 WAT [31761] LOG:  checkpoint starting: time
 2026-06-15 12:56:15.251 WAT [31761] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.018 s, sync=0.097 s, total=1.350 s; sync files=10, longest=0.062 s, average=0.010 s; distance=7 kB, estimate=3679 kB; lsn=0/195C238, redo lsn=0/195C200
+2026-06-15 14:06:14.649 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:06:15.466 WAT [31761] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.546 s, sync=0.078 s, total=0.818 s; sync files=6, longest=0.064 s, average=0.013 s; distance=7 kB, estimate=3312 kB; lsn=0/195E1B8, redo lsn=0/195E180
+2026-06-15 14:11:14.564 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:11:16.587 WAT [31761] LOG:  checkpoint complete: wrote 17 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.663 s, sync=0.142 s, total=2.023 s; sync files=13, longest=0.130 s, average=0.011 s; distance=11 kB, estimate=2982 kB; lsn=0/1960FD8, redo lsn=0/1960FA0
+2026-06-15 14:21:14.789 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:21:18.206 WAT [31761] LOG:  checkpoint complete: wrote 30 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.030 s, sync=0.194 s, total=3.418 s; sync files=90, longest=0.109 s, average=0.003 s; distance=161 kB, estimate=2700 kB; lsn=0/1989730, redo lsn=0/19896F8
+2026-06-15 14:26:14.303 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:26:15.981 WAT [31761] LOG:  checkpoint complete: wrote 15 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.432 s, sync=0.103 s, total=1.678 s; sync files=9, longest=0.092 s, average=0.012 s; distance=2 kB, estimate=2430 kB; lsn=0/1989F68, redo lsn=0/1989F30
+2026-06-15 14:41:15.283 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:41:17.514 WAT [31761] LOG:  checkpoint complete: wrote 20 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.946 s, sync=0.141 s, total=2.231 s; sync files=14, longest=0.100 s, average=0.011 s; distance=3 kB, estimate=2187 kB; lsn=0/198AE50, redo lsn=0/198AE18
+2026-06-15 14:51:15.718 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:51:16.655 WAT [31761] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.666 s, sync=0.098 s, total=0.937 s; sync files=7, longest=0.077 s, average=0.014 s; distance=2 kB, estimate=1969 kB; lsn=0/198B780, redo lsn=0/198B748
+2026-06-15 14:56:15.755 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 14:56:19.842 WAT [31761] LOG:  checkpoint complete: wrote 36 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.683 s, sync=0.132 s, total=4.087 s; sync files=35, longest=0.074 s, average=0.004 s; distance=164 kB, estimate=1788 kB; lsn=0/19B49B8, redo lsn=0/19B4980
+2026-06-15 15:01:15.939 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 15:01:17.079 WAT [31761] LOG:  checkpoint complete: wrote 8 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.737 s, sync=0.140 s, total=1.140 s; sync files=6, longest=0.083 s, average=0.024 s; distance=2 kB, estimate=1610 kB; lsn=0/19B5330, redo lsn=0/19B52F8
+2026-06-15 15:06:15.184 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 15:06:16.691 WAT [31761] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.222 s, sync=0.126 s, total=1.508 s; sync files=10, longest=0.111 s, average=0.013 s; distance=3 kB, estimate=1449 kB; lsn=0/19B62E8, redo lsn=0/19B62B0
+2026-06-15 16:03:55.278 WAT [31765] WARNING:  autovacuum worker took too long to start; canceled
+2026-06-15 16:06:28.628 WAT [51806] WARNING:  autovacuum worker started without a worker entry
+2026-06-15 16:10:19.131 WAT [31765] WARNING:  autovacuum worker took too long to start; canceled
+2026-06-15 16:18:13.721 WAT [31765] WARNING:  autovacuum worker took too long to start; canceled
+2026-06-15 16:18:53.673 WAT [51821] WARNING:  autovacuum worker started without a worker entry
+2026-06-15 16:23:11.948 WAT [51825] WARNING:  autovacuum worker started without a worker entry
+2026-06-15 16:27:53.070 WAT [31765] WARNING:  autovacuum worker took too long to start; canceled
+2026-06-15 16:36:23.175 WAT [51833] WARNING:  autovacuum worker started without a worker entry
+2026-06-15 17:08:24.185 WAT [6598] LOG:  starting PostgreSQL 16.3 (Debian 16.3-1+b1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 13.3.0-1) 13.3.0, 64-bit
+2026-06-15 17:08:24.190 WAT [6598] LOG:  listening on IPv6 address "::1", port 5432
+2026-06-15 17:08:24.190 WAT [6598] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-06-15 17:08:24.266 WAT [6598] LOG:  listening on Unix socket "/home/darkvador/Desktop/skillmatch/postgres_data/.s.PGSQL.5432"
+2026-06-15 17:08:24.355 WAT [6606] LOG:  database system was interrupted; last known up at 2026-06-15 15:06:16 WAT
+2026-06-15 17:08:24.845 WAT [6606] LOG:  database system was not properly shut down; automatic recovery in progress
+2026-06-15 17:08:24.905 WAT [6606] LOG:  redo starts at 0/19B62B0
+2026-06-15 17:08:24.906 WAT [6606] LOG:  invalid record length at 0/19B6398: expected at least 24, got 0
+2026-06-15 17:08:24.906 WAT [6606] LOG:  redo done at 0/19B6360 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2026-06-15 17:08:24.968 WAT [6604] LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-06-15 17:08:25.205 WAT [6604] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.047 s, sync=0.026 s, total=0.274 s; sync files=2, longest=0.018 s, average=0.013 s; distance=0 kB, estimate=0 kB; lsn=0/19B6398, redo lsn=0/19B6398
+2026-06-15 17:08:25.261 WAT [6598] LOG:  database system is ready to accept connections

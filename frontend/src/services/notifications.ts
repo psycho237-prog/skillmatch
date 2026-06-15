@@ -23,6 +23,18 @@ export async function registerForPushNotificationsAsync(userId: string) {
     
     try {
         const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.extra?.projectId;
+        if (!projectId) {
+          console.log('Skipping push notifications: No EAS projectId configured.');
+          return;
+        }
+
+        // On Android, check if google-services is configured to prevent native FirebaseApp not initialized crash
+        const hasGoogleServices = !!Constants.expoConfig?.android?.googleServicesFile;
+        if (Platform.OS === 'android' && !hasGoogleServices) {
+          console.log('Skipping push token fetch: Firebase google-services.json is not configured for Android.');
+          return;
+        }
+
         token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
         console.log('Push Token:', token);
         
@@ -30,7 +42,7 @@ export async function registerForPushNotificationsAsync(userId: string) {
           await api.updateUserPushToken(userId, token);
         }
     } catch (e) {
-        console.error('Error fetching push token', e);
+        console.warn('Failed to fetch push token:', e);
     }
   } else {
     // console.log('Must use physical device for Push Notifications');

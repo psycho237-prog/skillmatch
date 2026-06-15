@@ -5,10 +5,13 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon --ignore baileys_store src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@adiwajshing/keyed-db": "^0.2.4",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -16,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
     "pg": "^8.11.5",
+    "qrcode-terminal": "^0.12.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {

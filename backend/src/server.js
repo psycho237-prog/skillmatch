@@ -12,6 +12,7 @@ const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
 const uploadRoutes = require('./routes/upload');
 const { setupChatSocket } = require('./sockets/chat');
+const { initBaileys } = require('./config/whatsapp');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,8 +49,14 @@ app.get('/api/health', (req, res) => {
 setupChatSocket(io);
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, async () => {
   console.log(`🚀 SkillMatch server running on ${HOST}:${PORT}`);
+  try {
+    await initBaileys();
+    console.log('💚 Baileys WhatsApp client initialized successfully.');
+  } catch (err) {
+    console.error('❌ Failed to initialize Baileys:', err);
+  }
 });
 
 module.exports = { app, server, io };
