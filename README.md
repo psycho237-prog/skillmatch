@@ -1,4 +1,4 @@
-# 🔄 Swapster — The Skill Economy, À La Carte
+# 🔄 Swapster — The Skill Economy, On Map
 
 **Swapster** is an innovative mobile and web platform reshaping access to skills and expertise. It offers users absolute flexibility by letting them choose between **direct service exchange** (*skill-for-skill*) and **paid assignments** (*cash-for-skill*).
 
