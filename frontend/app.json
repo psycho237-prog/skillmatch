@@ -4,16 +4,16 @@
     "slug": "skillmatch",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.jpg",
+    "icon": "./assets/images/icon.png",
     "scheme": "skillmatch",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff",
       "dark": {
-        "image": "./assets/images/splash.png",
+        "image": "./assets/images/icon.png",
         "backgroundColor": "#0F0F23"
       }
     },
@@ -33,7 +33,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.jpg",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
@@ -76,11 +76,19 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.jpg",
+          "icon": "./assets/images/icon.png",
           "color": "#0061FF"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {
@@ -89,6 +97,12 @@
       "eas": {
         "projectId": "945a8eb7-010e-4cd6-bf4b-f8539b274bb6"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/945a8eb7-010e-4cd6-bf4b-f8539b274bb6"
     }
   }
 }
