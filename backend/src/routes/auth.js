@@ -48,7 +48,7 @@ router.post('/send-otp', async (req, res) => {
       [phone, codeHash, salt, expiresAt]
     );
 
-    const message = `Votre code de verification SkillMatch : ${code}`;
+    const message = `Your Swapster verification code is: ${code}. It expires in 10 minutes. Do not share this code with anyone.`;
     const jid = `${phone}@s.whatsapp.net`;
     let messageId = null;
     let sent = false;
@@ -90,7 +90,7 @@ router.post('/register', async (req, res) => {
     const phone = phone_number.replace(/[^\d]/g, '');
 
     // Check if user exists
-    const existingUser = await query('SELECT id FROM users WHERE phone_number = $1', [phone_number]);
+    const existingUser = await query('SELECT id FROM users WHERE phone_number = $1', [phone]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: 'Phone number already registered' });
     }
@@ -150,7 +150,7 @@ router.post('/register', async (req, res) => {
     const newUser = await query(
       `INSERT INTO users (phone_number, password_hash, display_name, created_at, last_login) 
        VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme`,
-      [phone_number, password_hash, display_name]
+      [phone, password_hash, display_name]
     );
 
     const user = newUser.rows[0];
@@ -172,7 +172,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Missing phone_number or password' });
     }
 
-    const result = await query('SELECT * FROM users WHERE phone_number = $1', [phone_number]);
+    const phone = phone_number.replace(/[^\d]/g, '');
+    const result = await query('SELECT * FROM users WHERE phone_number = $1', [phone]);
     
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid phone number or password' });
@@ -271,7 +272,7 @@ router.get('/qr-page', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>WhatsApp OTP Linkage Dashboard</title>
+      <title>Swapster OTP Gateway</title>
       <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
       <style>
         :root {
@@ -502,8 +503,8 @@ router.get('/qr-page', (req, res) => {
     <body>
       <div class="dashboard">
         <div class="header">
-          <h1>SkillMatch OTP Gateway</h1>
-          <p class="desc">Connect the server to WhatsApp to enable automated OTP registration messages.</p>
+          <h1>Swapster OTP Gateway</h1>
+          <p class="desc">Connect the server to WhatsApp to enable automated OTP verification messages.</p>
         </div>
 
         <div class="status-badge status-disconnected" id="statusBadge">

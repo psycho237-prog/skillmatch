@@ -100,7 +100,7 @@ export default function Welcome() {
         <Image style={styles.image} source={onboardingImage}/>
         <View style={styles.header}>
           <Typography variant="h1" align="center" style={styles.title}>
-            Welcome to <Text style={{color: colors.primary}}>SkillMatch</Text>
+            Welcome to <Text style={{color: colors.primary}}>Swapster</Text>
           </Typography>
           <Typography variant="body2" color={colors.black2} align="center" style={styles.desc}>
             Let's Bridge You to <Text style={{color: colors.primary }}>Your Ideal Client</Text>

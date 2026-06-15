@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "SkillMatch",
-    "slug": "skillmatch",
+    "name": "Swapster",
+    "slug": "swapster",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "skillmatch",
+    "scheme": "swapster",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -19,12 +19,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.skillmatch.app",
+      "bundleIdentifier": "com.swapster.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "SkillMatch needs camera access to take photos for your service listings.",
-        "NSPhotoLibraryUsageDescription": "SkillMatch needs photo library access to upload images for your service listings.",
-        "NSLocationWhenInUseUsageDescription": "SkillMatch needs your location to show nearby services.",
-        "NSLocationAlwaysUsageDescription": "SkillMatch uses your location to recommend nearby services."
+        "NSCameraUsageDescription": "Swapster needs camera access to take photos for your service listings.",
+        "NSPhotoLibraryUsageDescription": "Swapster needs photo library access to upload images for your service listings.",
+        "NSLocationWhenInUseUsageDescription": "Swapster needs your location to show nearby services.",
+        "NSLocationAlwaysUsageDescription": "Swapster uses your location to recommend nearby services."
       }
     },
     "web": {
@@ -38,7 +38,7 @@
       },
       "softwareKeyboardLayoutMode": "pan",
       "versionCode": 1,
-      "package": "com.skillmatch.app",
+      "package": "com.swapster.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -58,19 +58,19 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SkillMatch to access your camera for service photos."
+          "cameraPermission": "Allow Swapster to access your camera for service photos."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow SkillMatch to access your photos for service listings."
+          "photosPermission": "Allow Swapster to access your photos for service listings."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow SkillMatch to use your location to find nearby services."
+          "locationAlwaysAndWhenInUsePermission": "Allow Swapster to use your location to find nearby services."
         }
       ],
       [

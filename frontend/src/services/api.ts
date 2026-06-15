@@ -234,6 +234,126 @@ class ApiService {
   async updateUserPushToken(userId: string, token: string) {
     return this.updateUser(userId, { push_token: token });
   }
+
+  // Wallet
+  async getWalletBalance() {
+    return this.request('/wallet/balance');
+  }
+
+  async getWalletHistory() {
+    return this.request('/wallet/history');
+  }
+
+  async depositFunds(amount: number, mobileMoneyNumber: string) {
+    return this.request('/wallet/deposit', {
+      method: 'POST',
+      body: JSON.stringify({ amount, mobile_money_number: mobileMoneyNumber }),
+    });
+  }
+
+  async withdrawFunds(amount: number, mobileMoneyNumber: string) {
+    return this.request('/wallet/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ amount, mobile_money_number: mobileMoneyNumber }),
+    });
+  }
+
+  // Transactions
+  async getTransactions() {
+    return this.request('/transactions');
+  }
+
+  async createTransaction(data: any) {
+    return this.request('/transactions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async acceptTransaction(id: string) {
+    return this.request(`/transactions/${id}/accept`, { method: 'POST' });
+  }
+
+  async completeTransaction(id: string) {
+    return this.request(`/transactions/${id}/complete`, { method: 'POST' });
+  }
+
+  async confirmTransaction(id: string) {
+    return this.request(`/transactions/${id}/confirm`, { method: 'POST' });
+  }
+
+  async disputeTransaction(id: string, reason: string) {
+    return this.request(`/transactions/${id}/dispute`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async submitTransactionProof(id: string, description: string, files: string[] = []) {
+    return this.request(`/transactions/${id}/proof`, {
+      method: 'POST',
+      body: JSON.stringify({ description, files }),
+    });
+  }
+
+  async cancelTransaction(id: string) {
+    return this.request(`/transactions/${id}/cancel`, { method: 'POST' });
+  }
+
+  // ================= ADMIN API =================
+  async getAdminStats() {
+    return this.request('/admin/stats');
+  }
+
+  async getAdminTransactions(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/transactions?${query}`);
+  }
+
+  async getAdminTransactionDetails(id: string) {
+    return this.request(`/admin/transactions/${id}`);
+  }
+
+  async getAdminWalletOps(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/wallet-ops?${query}`);
+  }
+
+  async getAdminUsers(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/users?${query}`);
+  }
+
+  async setAdminUserStatus(id: string, status: string, reason: string) {
+    return this.request(`/admin/users/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status, reason }),
+    });
+  }
+
+  async adminManualWallet(id: string, action: 'credit' | 'debit', amount: number, reason: string) {
+    return this.request(`/admin/users/${id}/wallet-manual`, {
+      method: 'POST',
+      body: JSON.stringify({ action, amount, reason }),
+    });
+  }
+
+  async getAdminDisputes(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/disputes?${query}`);
+  }
+
+  async resolveAdminDispute(id: string, resolution: string, reason: string, providerSharePercentage?: number) {
+    return this.request(`/admin/disputes/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ resolution, reason, providerSharePercentage }),
+    });
+  }
+
+  async getAdminLogs(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/logs?${query}`);
+  }
 }
 
 export const api = new ApiService();
