@@ -45,10 +45,8 @@ router.post('/', upload.array('images', 10), (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    // Build URLs for each uploaded file
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const urls = req.files.map(file => `${protocol}://${host}/uploads/${file.filename}`);
+    // Build relative paths for each uploaded file
+    const urls = req.files.map(file => `/uploads/${file.filename}`);
 
     console.log(`[UPLOAD] ${req.files.length} file(s) uploaded: ${urls.join(', ')}`);
 

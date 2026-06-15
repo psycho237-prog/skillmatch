@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from 'reac
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
-import { api } from '../../src/services/api';
+import { api, resolveImageUrl } from '../../src/services/api';
 import { socketService } from '../../src/services/socket';
 
 export default function ChatList() {
@@ -71,7 +71,7 @@ export default function ChatList() {
       }}
     >
       <Image 
-        source={{ uri: item.other_user?.avatar_url || 'https://via.placeholder.com/150' }} 
+        source={{ uri: resolveImageUrl(item.other_user?.avatar_url) }} 
         style={styles.avatar} 
       />
       <View style={styles.convContent}>

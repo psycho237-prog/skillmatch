@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext';
 import { Typography } from './Typography';
 import { icons } from '../constants';
+import { resolveImageUrl } from '../services/api';
 
 export interface ServiceCardProps {
   id: string;
@@ -70,7 +71,7 @@ export const ServiceCard = ({
         activeOpacity={0.8}
         onPress={handlePress}
       >
-        <Image source={{ uri: imageUrl }} style={styles.hImage} />
+        <Image source={{ uri: resolveImageUrl(imageUrl) }} style={styles.hImage} />
         <View style={styles.hContent}>
           <Typography variant="h6" numberOfLines={1}>{title}</Typography>
           <Typography variant="caption" color={colors.black2} style={styles.location}>
@@ -106,7 +107,7 @@ export const ServiceCard = ({
       activeOpacity={0.8}
       onPress={handlePress}
     >
-      <Image source={{ uri: imageUrl }} style={styles.vImage} />
+      <Image source={{ uri: resolveImageUrl(imageUrl) }} style={styles.vImage} />
       <View style={styles.vOverlay}>
         <View  style={[styles.vRatingBadge, { backgroundColor: colors.bg_rating }]}>
           <Image source={icons.star} style={styles.starIcon} />

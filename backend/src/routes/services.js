@@ -64,6 +64,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+// GET /api/services/categories - Get distinct categories
+router.get('/categories', async (req, res) => {
+  try {
+    const { rows } = await query('SELECT * FROM categories ORDER BY name');
+    res.json({ categories: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
 // GET /api/services/featured - Get featured services
 router.get('/featured', async (req, res) => {
   try {
@@ -74,9 +96,9 @@ router.get('/featured', async (req, res) => {
              (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
              EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s
-      JOIN users u ON s.user_id = u.id
-      WHERE s.is_active = true AND s.is_featured = true
-      ORDER BY (s.rating * 0.7 + (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) * 0.3) DESC
+      JOIN users u ON u.id = s.user_id
+      WHERE s.is_active = true 
+      ORDER BY s.featured DESC, s.rating DESC, s.created_at DESC
       LIMIT 10
     `, [user_id || null]);
 
@@ -84,16 +106,6 @@ router.get('/featured', async (req, res) => {
   } catch (error) {
     console.error('Featured fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch featured services' });
-  }
-});
-
-// GET /api/services/categories - Get distinct categories
-router.get('/categories', async (req, res) => {
-  try {
-    const { rows } = await query('SELECT * FROM categories ORDER BY name');
-    res.json({ categories: rows });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch categories' });
   }
 });
 
@@ -134,6 +146,25 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+//UPDATE FEATURED SCORE
+async function updateFeaturedScore(serviceId){
+  const sql = `
+  UPDATE services s
+  SET featured = (
+    (s.rating * 0.5) + (s.review_count * 0.2) + (SELECT COUNT(*) FROM favorites f WHERE f.service_id = s.id) * 0.3 + 
+    CASE
+      WHEN s.created_at > NOW() - INTERVAL '7 days' THEN 10 
+      WHEN s.created_at > NOW() - INTERVAL '30 days' THEN 5
+      ELSE 0
+      END 
+  ),
+  updated_at = NOW()
+  WHERE s.id=$1
+  `;
+
+  await query(sql, [serviceId]);
+}
+
 // POST /api/services - Create a new service
 router.post('/', async (req, res) => {
   try {
@@ -147,27 +178,32 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const effectivePriceType = price_type || 'negotiable';
+    const freshnessBonus = 10;
+    const featuredScore = freshnessBonus;
+
     const insertSql = `
       INSERT INTO services (
         user_id, title, description, category, price, price_type,
         currency, barter_skill,
         location, latitude, longitude, images, tags,
-        rating, review_count, is_active, is_featured, created_at, updated_at
+        rating, review_count,featured, is_active, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, true, false, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0,$14, true, NOW(), NOW()
       ) RETURNING *
     `;
 
-    const effectivePriceType = price_type || 'negotiable';
+  
 
     const params = [
       user_id, title, description, category,
       effectivePriceType === 'exchange' ? 0 : (price || 0),
       effectivePriceType,
-      currency || 'USD',
+      currency || 'XAF',
       barter_skill || null,
       location || '', latitude || null, longitude || null,
-      images || '{}', tags || '{}'
+      images || '{}', tags || '{}',
+      featuredScore
     ];
 
     const { rows } = await query(insertSql, params);
@@ -194,6 +230,7 @@ router.post('/:id/reviews', async (req, res) => {
       [req.params.id, user_id, rating, content || '']
     );
     
+    
     // Update service rating rolling average and count dynamically
     await query(`
       UPDATE services 
@@ -202,6 +239,7 @@ router.post('/:id/reviews', async (req, res) => {
       WHERE id = $1
     `, [req.params.id]);
 
+    await updateFeaturedScore(req.params.id);
     res.json({ success: true, message: 'Rating applied' });
   } catch (error) {
     console.error('Review error:', error);
@@ -233,12 +271,14 @@ router.post('/:id/favorite', async (req, res) => {
 
     // Optimized atomic toggle
     const deleteRes = await query('DELETE FROM favorites WHERE user_id = $1 AND service_id = $2', [user_id, req.params.id]);
+    await updateFeaturedScore(req.params.id);
 
     if (deleteRes.rowCount > 0) {
       res.json({ favorited: false, message: 'Removed from favorites' });
     } else {
       try {
         await query('INSERT INTO favorites (user_id, service_id) VALUES ($1, $2)', [user_id, req.params.id]);
+        await updateFeaturedScore(req.params.id);
         res.json({ favorited: true, message: 'Added to favorites' });
       } catch (insertError) {
         if (insertError.code === '23505') {

@@ -1,11 +1,10 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { AppProvider, useApp } from '../src/contexts/AppContext';
-import { View, ActivityIndicator, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, ActivityIndicator, Image, StyleSheet} from 'react-native';
 import { images } from '../src/constants';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
-import { Colors } from '../src/constants/Colors';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 

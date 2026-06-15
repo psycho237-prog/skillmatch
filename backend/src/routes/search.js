@@ -119,7 +119,7 @@ router.post('/', async (req, res) => {
       else if (title.includes(lowerQuery)) score += 50;
       if (description.includes(lowerQuery)) score += 25;
       score += (service.rating || 0) * 5;
-      if (service.is_featured) score += 20;
+      if (service.featured > 0) score += 20;
 
       return { ...service, _relevance_score: score };
     });

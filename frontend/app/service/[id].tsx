@@ -5,7 +5,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { Button } from '../../src/components/Button';
 import { icons, images } from '../../src/constants';
-import { api } from '../../src/services/api';
+import { api, resolveImageUrl } from '../../src/services/api';
 
 export default function ServiceDetail() {
   const { width } = useWindowDimensions();
@@ -168,7 +168,7 @@ export default function ServiceDetail() {
             showsHorizontalScrollIndicator={false}
           >
             {service.images.map((img: string, i: number) => (
-              <Image key={i} source={{ uri: img }} style={[styles.mainImage, { width }]} resizeMode='cover'/>
+              <Image key={i} source={{ uri: resolveImageUrl(img) }} style={[styles.mainImage, { width }]} resizeMode='cover'/>
             ))}
           </ScrollView>
 
@@ -253,7 +253,7 @@ export default function ServiceDetail() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {service.images.map((img: string, i: number) => (
                 <TouchableOpacity key={i} onPress={() => setActiveImage(i)}>
-                  <Image source={{ uri: img }} style={[styles.galleryImage, { borderColor: activeImage === i ? colors.primary : 'transparent', borderWidth: 2 }]} />
+                  <Image source={{ uri: resolveImageUrl(img) }} style={[styles.galleryImage, { borderColor: activeImage === i ? colors.primary : 'transparent', borderWidth: 2 }]} />
                 </TouchableOpacity>
               ))}
             </ScrollView>

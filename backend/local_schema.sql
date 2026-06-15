@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS services (
   category TEXT NOT NULL,
   price DECIMAL(10,2) DEFAULT 0,
   price_type TEXT DEFAULT 'negotiable',
+  currency TEXT DEFAULT 'USD',
+  barter_skill TEXT,
   location TEXT,
   latitude DECIMAL(10,7),
   longitude DECIMAL(10,7),
@@ -45,7 +47,7 @@ CREATE TABLE IF NOT EXISTS services (
   rating DECIMAL(2,1) DEFAULT 0,
   review_count INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
-  is_featured BOOLEAN DEFAULT false,
+  featured numeric DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

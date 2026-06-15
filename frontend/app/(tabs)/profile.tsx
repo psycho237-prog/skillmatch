@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Share, Linking, Modal, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api } from '../../src/services/api';
+import { api, resolveImageUrl } from '../../src/services/api';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
@@ -124,7 +124,7 @@ export default function Profile() {
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <Image 
-              source={{ uri: user?.avatar_url || 'https://via.placeholder.com/150' }} 
+              source={{ uri: resolveImageUrl(user?.avatar_url) }} 
               style={styles.avatar} 
             />
             <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>

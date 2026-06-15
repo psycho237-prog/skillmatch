@@ -13,7 +13,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { ServiceCard } from '../../src/components/ServiceCard';
 import { icons } from '../../src/constants';
-import { api } from '../../src/services/api';
+import { api, resolveImageUrl } from '../../src/services/api';
 
 export default function Home() {
   const { colors, t, user } = useApp();
@@ -97,7 +97,7 @@ export default function Home() {
         <View style={styles.header}>
           <View style={styles.profileInfo}>
             <Image
-              source={{ uri: user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+              source={{ uri: resolveImageUrl(user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp') }}
               style={styles.avatar}
             />
             <View style={styles.greeting}>
@@ -132,7 +132,7 @@ export default function Home() {
         {loading && <ActivityIndicator style={{ marginTop: 25 }} color={colors.primary} size="large" />}
 
         {/* Featured Section */}
-        {!loading && featured.length > 0 && (
+        {!loading /*&& featured.length > 0*/ && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Typography variant="h4">{t('featured')}</Typography>

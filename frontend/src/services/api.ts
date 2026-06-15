@@ -4,6 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = ENV.API_URL;
 
+export const resolveImageUrl = (url: string | null | undefined): string => {
+  if (!url) return 'https://via.placeholder.com/150';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads')) return `${ENV.SOCKET_URL}${url}`;
+  return url; // fallback for local paths or others
+};
+
 class ApiService {
   private baseUrl: string;
 
@@ -20,12 +27,12 @@ class ApiService {
     const token = await this.getToken();
 
     const config: RequestInit = {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers,
       },
-      ...options,
     };
 
     try {
