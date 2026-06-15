@@ -11,6 +11,10 @@ const usersRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
 const uploadRoutes = require('./routes/upload');
+const walletRoutes = require('./routes/wallet');
+const transactionsRoutes = require('./routes/transactions');
+const adminRoutes = require('./routes/admin');
+const webhookRoutes = require('./routes/webhooks');
 const { setupChatSocket } = require('./sockets/chat');
 const { initBaileys } = require('./config/whatsapp');
 
@@ -39,6 +43,10 @@ app.use('/api/users', usersRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/transactions', transactionsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

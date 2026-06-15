@@ -31,7 +31,7 @@ export default function Index() {
           style={[styles.image, { opacity: fadeAnim }]}
           resizeMode="cover"
         />
-        <Text style={{color: colors.primary}}>SkillMatch</Text>
+        <Text style={{color: colors.primary}}>Swapster</Text>
       </View>
     );
   }
