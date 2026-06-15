@@ -55,8 +55,8 @@ export default function Profile() {
   const handleInvite = async () => {
     try {
       await Share.share({
-        message: 'Join me on SkillMatch! ' + 'skillmatch.bridge.dev',
-        url: 'https://skillmatch.bridge.dev', // iOS
+        message: 'Join me on Swapster! ' + 'swapster.bridge.dev',
+        url: 'https://swapster.bridge.dev', // iOS
       });
     } catch (e) {
       console.error(e);
@@ -64,7 +64,7 @@ export default function Profile() {
   };
 
   const handleHelp = () => {
-    Linking.openURL('https://skillmatch.bridge.dev/help');
+    Linking.openURL('https://swapster.bridge.dev/help');
   };
 
   const getThemeText = () => {
@@ -111,6 +111,10 @@ export default function Profile() {
     { icon: icons.info, title: t('help_center'), action: handleHelp },
     { icon: icons.people, title: t('invite_friends'), action: handleInvite },
   ];
+
+  if (user?.role === 'superadmin') {
+    menuItems.unshift({ icon: icons.shield, title: 'Admin Dashboard', action: () => router.push('/(admin)') });
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

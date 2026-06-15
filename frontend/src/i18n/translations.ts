@@ -1,11 +1,11 @@
 export const translations = {
   en: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: 'Connecting You to the Right Skills.',
     welcome_title: "Let's Get You Closer\nTo ",
     welcome_highlight: 'Your Ideal Service',
-    welcome_subtitle: 'Login to SkillMatch with Google',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: 'Sign Up with Google',
     welcome_to: 'WELCOME TO SKILLMATCH',
 
@@ -144,11 +144,11 @@ export const translations = {
 
   fr: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: 'Connecter aux bonnes compétences.',
     welcome_title: "Rapprochons-vous\nDe ",
     welcome_highlight: 'Votre Service Idéal',
-    welcome_subtitle: 'Connectez-vous à SkillMatch avec Google',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: "S'inscrire avec Google",
     welcome_to: 'BIENVENUE SUR SKILLMATCH',
 
@@ -287,11 +287,11 @@ export const translations = {
 
   de: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: 'Verbindet Sie mit den richtigen Fähigkeiten.',
     welcome_title: "Kommen Sie näher\nZu ",
     welcome_highlight: 'Ihrem idealen Service',
-    welcome_subtitle: 'Melden Sie sich bei SkillMatch mit Google an',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: 'Mit Google anmelden',
     welcome_to: 'WILLKOMMEN BEI SKILLMATCH',
 
@@ -430,11 +430,11 @@ export const translations = {
 
   zh: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: '将您与合适的技能联系起来。',
     welcome_title: "让您更接近\n",
     welcome_highlight: '您的理想服务',
-    welcome_subtitle: '使用Google登录SkillMatch',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: '使用Google注册',
     welcome_to: '欢迎来到SKILLMATCH',
 
@@ -573,11 +573,11 @@ export const translations = {
 
   es: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: 'Conectándote con las habilidades adecuadas.',
     welcome_title: "Acércate más\nA ",
     welcome_highlight: 'Tu Servicio Ideal',
-    welcome_subtitle: 'Inicia sesión en SkillMatch con Google',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: 'Registrarse con Google',
     welcome_to: 'BIENVENIDO A SKILLMATCH',
 
@@ -716,11 +716,11 @@ export const translations = {
 
   ru: {
     // Common
-    app_name: 'SkillMatch',
+    app_name: 'Swapster',
     tagline: 'Связываем вас с нужными навыками.',
     welcome_title: "Приблизьтесь\nК ",
     welcome_highlight: 'Вашему идеальному сервису',
-    welcome_subtitle: 'Войдите в SkillMatch через Google',
+    welcome_subtitle: 'Login to Swapster with Google',
     sign_up_google: 'Зарегистрироваться через Google',
     welcome_to: 'ДОБРО ПОЖАЛОВАТЬ В SKILLMATCH',
 
