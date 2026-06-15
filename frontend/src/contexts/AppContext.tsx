@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations, Language, TranslationKey } from '../i18n/translations';
 import { Colors, ThemeName, ColorScheme } from '../constants/Colors';
 import { registerForPushNotificationsAsync, setupNotificationHandlers } from '../services/notifications';
+import { api } from '../services/api';
 
 interface User {
   id: string;
@@ -102,25 +103,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (newUser) {
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
       if (newToken) await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
+      if (newUser.theme) {
+        setThemePrefState(newUser.theme as 'system' | 'light' | 'dark');
+        await AsyncStorage.setItem(STORAGE_KEYS.THEME, newUser.theme);
+      }
+      if (newUser.language) {
+        setLangState(newUser.language as Language);
+        await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, newUser.language);
+      }
+      if (newUser.notification_enabled !== undefined) {
+        setNotifState(newUser.notification_enabled);
+        await AsyncStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, String(newUser.notification_enabled));
+      }
     } else {
       await AsyncStorage.removeItem(STORAGE_KEYS.USER);
       await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
+      setThemePrefState('system');
+      await AsyncStorage.removeItem(STORAGE_KEYS.THEME);
     }
   };
 
   const setThemePreference = async (pref: 'system' | 'light' | 'dark') => {
     setThemePrefState(pref);
     await AsyncStorage.setItem(STORAGE_KEYS.THEME, pref);
+    if (user) {
+      try {
+        const updateRes = await api.updateUser(user.id, { theme: pref });
+        setUserState(updateRes.user);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
+      } catch (e) {
+        console.error('Failed to sync theme to server:', e);
+      }
+    }
   };
 
   const setLanguage = async (lang: Language) => {
     setLangState(lang);
     await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+    if (user) {
+      try {
+        const updateRes = await api.updateUser(user.id, { language: lang });
+        setUserState(updateRes.user);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
+      } catch (e) {
+        console.error('Failed to sync language to server:', e);
+      }
+    }
   };
 
   const setNotificationsEnabled = async (enabled: boolean) => {
     setNotifState(enabled);
     await AsyncStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, String(enabled));
+    if (user) {
+      try {
+        const updateRes = await api.updateUser(user.id, { notification_enabled: enabled });
+        setUserState(updateRes.user);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
+      } catch (e) {
+        console.error('Failed to sync notifications to server:', e);
+      }
+    }
   };
 
   // Resolve theme

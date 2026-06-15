@@ -1,0 +1,16 @@
+2026-06-15 12:26:13.478 WAT [31759] LOG:  starting PostgreSQL 16.3 (Debian 16.3-1+b1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 13.3.0-1) 13.3.0, 64-bit
+2026-06-15 12:26:13.480 WAT [31759] LOG:  listening on IPv6 address "::1", port 5432
+2026-06-15 12:26:13.480 WAT [31759] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-06-15 12:26:13.575 WAT [31759] LOG:  listening on Unix socket "/home/darkvador/Desktop/skillmatch/postgres_data/.s.PGSQL.5432"
+2026-06-15 12:26:13.726 WAT [31763] LOG:  database system was shut down at 2026-06-15 12:25:38 WAT
+2026-06-15 12:26:13.855 WAT [31759] LOG:  database system is ready to accept connections
+2026-06-15 12:26:22.532 WAT [31783] FATAL:  database "darkvador" does not exist
+2026-06-15 12:27:07.512 WAT [31835] ERROR:  column "is_featured" of relation "services" does not exist at character 102
+2026-06-15 12:27:07.512 WAT [31835] STATEMENT:  INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, is_featured, rating, review_count, images) 
+	     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+2026-06-15 12:31:13.804 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 12:32:53.061 WAT [31761] LOG:  checkpoint complete: wrote 986 buffers (6.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=98.939 s, sync=0.174 s, total=99.258 s; sync files=350, longest=0.113 s, average=0.001 s; distance=4540 kB, estimate=4540 kB; lsn=0/1958AB8, redo lsn=0/1958A80
+2026-06-15 12:51:13.420 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 12:51:14.796 WAT [31761] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.133 s, sync=0.097 s, total=1.377 s; sync files=9, longest=0.080 s, average=0.011 s; distance=6 kB, estimate=4087 kB; lsn=0/195A3F0, redo lsn=0/195A3B8
+2026-06-15 12:56:13.902 WAT [31761] LOG:  checkpoint starting: time
+2026-06-15 12:56:15.251 WAT [31761] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.018 s, sync=0.097 s, total=1.350 s; sync files=10, longest=0.062 s, average=0.010 s; distance=7 kB, estimate=3679 kB; lsn=0/195C238, redo lsn=0/195C200

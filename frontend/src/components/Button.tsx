@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useApp } from '../contexts/AppContext';
 import { Typography } from './Typography';
+import { Colors } from '../constants/Colors';
 
 export interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -66,11 +67,11 @@ export const Button = ({
   const getTextColor = (): string => {
     if (disabled) return colors.black3;
     switch (variant) {
-      case 'primary': return Colors.light.white; // Always white on primary
+      case 'primary': return '#FFFFFF'; // Always white on primary
       case 'secondary': return colors.primary;
       case 'outline': return colors.black1;
       case 'ghost': return colors.primary;
-      case 'danger': return Colors.light.white;
+      case 'danger': return '#FFFFFF';
     }
   };
 
@@ -134,4 +135,3 @@ const styles = StyleSheet.create({
   },
 });
 
-import { Colors } from '../constants/Colors';

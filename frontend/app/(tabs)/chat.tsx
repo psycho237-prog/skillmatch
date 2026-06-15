@@ -88,7 +88,7 @@ export default function ChatList() {
             {item.last_message?.content || 'Started a conversation'}
           </Typography>
           {item.unread_count > 0 && (
-            <View style={styles.unreadBadge}>
+            <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
               <Typography variant="caption" color="#FFF">{item.unread_count}</Typography>
             </View>
           )}
@@ -99,7 +99,7 @@ export default function ChatList() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Typography variant="h4" style={styles.title}>{t('messages')}</Typography>
       </View>
       <FlatList
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: 'transparent',
   },
   title: {
     textAlign: 'center',
@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unreadBadge: {
-    backgroundColor: '#0061FF',
     borderRadius: 12,
     minWidth: 24,
     height: 24,

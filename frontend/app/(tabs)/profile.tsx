@@ -127,7 +127,7 @@ export default function Profile() {
               source={{ uri: resolveImageUrl(user?.avatar_url) }} 
               style={styles.avatar} 
             />
-            <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>
+            <TouchableOpacity style={[styles.editAvatarBtn, { backgroundColor: colors.primary, borderColor: colors.background }]} onPress={pickImage}>
               <Image source={icons.edit} style={styles.editIcon} />
             </TouchableOpacity>
           </View>
@@ -219,7 +219,7 @@ function SelectionModal({ visible, onClose, title, options, selectedValue, onSel
         <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
           <Typography variant="h4" style={styles.modalTitle}>{title}</Typography>
           {options.map((opt: any) => (
-            <TouchableOpacity key={opt.value} style={styles.radioItem} onPress={() => onSelect(opt.value)}>
+            <TouchableOpacity key={opt.value} style={[styles.radioItem, { borderBottomColor: colors.border }]} onPress={() => onSelect(opt.value)}>
               <Typography variant="h6" color={selectedValue === opt.value ? colors.primary : colors.black1}>{opt.label}</Typography>
               <View style={[styles.radioOuter, { borderColor: selectedValue === opt.value ? colors.primary : colors.black3 }]}>
                 {selectedValue === opt.value && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
@@ -265,14 +265,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#0061FF',
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#FFF', // Always white to pop
   },
   editIcon: {
     width: 16,
@@ -327,7 +325,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   radioOuter: {
     width: 24,

@@ -1,0 +1,1 @@
+/usr/lib/postgresql/16/bin/postgres "-D" "/home/darkvador/Desktop/skillmatch/postgres_data"

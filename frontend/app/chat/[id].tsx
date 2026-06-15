@@ -170,7 +170,7 @@ export default function ChatRoom() {
                 <Typography variant="body2">{t('theme')}: {t(theme === 'dark' ? 'theme_dark' : 'theme_light')}</Typography>
               </TouchableOpacity>
               
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
               
               <Typography variant="caption" color={colors.black3} style={styles.dropdownLabel}>{t('language')}</Typography>
               <View style={styles.langGrid}>
@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.1)',
     marginVertical: 4,
   },
   dropdownLabel: {

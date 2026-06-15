@@ -25,7 +25,7 @@ export default function Index() {
 
   if (!isReady) {
     return (
-      <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F0F23' : '#FFFFFF' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Animated.Image
           source={images.splash}
           style={[styles.image, { opacity: fadeAnim }]}

@@ -23,7 +23,7 @@ const PRICE_TYPES: ('fixed' | 'hourly' | 'exchange')[] = ['fixed', 'hourly', 'ex
 
 export default function PostService() {
   const router = useRouter();
-  const { colors, user, t } = useApp();
+  const { colors, user, t, theme } = useApp();
   
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
@@ -107,7 +107,7 @@ export default function PostService() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Typography variant="body1" color={colors.primary}>{t('back')}</Typography>
@@ -124,7 +124,7 @@ export default function PostService() {
             {imageUris.map((uri, index) => (
               <View key={index} style={styles.imageWrapper}>
                 <Image source={{ uri }} style={styles.previewImage} />
-                <TouchableOpacity style={styles.removeBadge} onPress={() => removeImage(index)}>
+                <TouchableOpacity style={[styles.removeBadge, { backgroundColor: colors.danger, borderColor: colors.background }]} onPress={() => removeImage(index)}>
                   <Typography variant="caption" color="white">×</Typography>
                 </TouchableOpacity>
               </View>
@@ -319,14 +319,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#F75555',
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'white',
   },
   imagePicker: {
     width: 120,

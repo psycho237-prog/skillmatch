@@ -79,11 +79,11 @@ export default function Explore() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.backBtn, { backgroundColor: colors.card }]} onPress={() => router.back()}>
           <Image source={icons.backArrow} style={[styles.backIcon, { tintColor: colors.black1 }]} />
         </TouchableOpacity>
         <Typography variant="h4" style={styles.title}>{t('explore')}</Typography>
-        <View style={styles.backBtn} />{/* Empty view for alignment wrapper */}
+        <View style={[styles.backBtn, { backgroundColor: colors.card }]} />{/* Empty view for alignment wrapper */}
       </View>
 
       <View style={styles.searchRow}>
@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.03)',
     justifyContent: 'center',
     alignItems: 'center',
   },

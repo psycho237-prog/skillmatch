@@ -35,7 +35,7 @@ async function seed() {
 
   console.log('Seeding services...');
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, is_featured, rating, review_count, images) 
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       user1.id, 
@@ -46,7 +46,7 @@ async function seed() {
       'hourly', 
       'New York, NY', 
       true, 
-      true, 
+      1, 
       4.9, 
       24, 
       ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png']
@@ -54,7 +54,7 @@ async function seed() {
   );
 
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, is_featured, rating, review_count, images) 
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       user2.id, 
@@ -65,7 +65,7 @@ async function seed() {
       'fixed', 
       'Chicago, IL', 
       true, 
-      true, 
+      1, 
       4.7, 
       12, 
       ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
@@ -73,7 +73,7 @@ async function seed() {
   );
 
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, is_featured, rating, review_count, images) 
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       user3.id, 
@@ -84,7 +84,7 @@ async function seed() {
       'fixed', 
       'Remote', 
       true, 
-      false, 
+      0, 
       5.0, 
       38, 
       ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']

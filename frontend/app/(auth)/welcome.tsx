@@ -75,7 +75,7 @@ export default function Welcome() {
               <TextInput
                 placeholder="Full Name"
                 placeholderTextColor={colors.black3}
-                style={[styles.input, { color: colors.black3 }]}
+                style={[styles.input, { color: colors.black1 }]}
                 value={displayName}
                 onChangeText={setDisplayName}
               />
@@ -87,7 +87,7 @@ export default function Welcome() {
               placeholder="Phone Number"
               placeholderTextColor={colors.black3}
               keyboardType="phone-pad"
-              style={[styles.input, { color: colors.black3 }]}
+              style={[styles.input, { color: colors.black1 }]}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
             />
@@ -98,7 +98,7 @@ export default function Welcome() {
               placeholder="Password"
               placeholderTextColor={colors.black3}
               secureTextEntry
-              style={[styles.input, { color: colors.black3 }]}
+              style={[styles.input, { color: colors.black1 }]}
               value={password}
               onChangeText={setPassword}
             />
@@ -125,9 +125,7 @@ export default function Welcome() {
 
 const styles = StyleSheet.create({
   container: {
-    height:'100%',
     flex: 1,
-    position:'absolute'
   },
   image:{
     position: 'relative',
