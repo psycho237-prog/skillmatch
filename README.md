@@ -1,46 +1,46 @@
-# 🔄 Swapster — L'économie des compétences, à la carte
+# 🔄 Swapster — The Skill Economy, À La Carte
 
-**Swapster** est une plateforme mobile et web innovante qui réinvente l'accès aux compétences. Elle offre aux utilisateurs une flexibilité totale en leur permettant de choisir entre le **troc direct de services** (*skill-for-skill*) et les **missions rémunérées** (*cash-for-skill*). 
+**Swapster** is an innovative mobile and web platform reshaping access to skills and expertise. It offers users absolute flexibility by letting them choose between **direct service exchange** (*skill-for-skill*) and **paid assignments** (*cash-for-skill*).
 
-En quelques clics, particuliers et professionnels peuvent publier une offre ou une demande, matcher avec un prestataire fiable, et régler via un système de crédits convertibles ou un paiement sécurisé.
-
----
-
-## 💡 Valeur Unique
-
-La liberté absolue de choisir le mode de règlement :
-- **Échange de compétences (Skill-for-Skill) :** Pour économiser son budget, valoriser son propre savoir-faire et créer du lien communautaire.
-- **Paiement instantané (Cash-for-Skill) :** Pour prioriser la rapidité, l'immédiateté et le professionnalisme du service.
+In just a few clicks, individuals and professionals can publish an offer or request, match with a trusted provider, and settle transactions using a convertible credit system or secure payment gateway.
 
 ---
 
-## 🎯 Public Cible
+## 💡 Unique Value Proposition
 
-Swapster s'adresse à un écosystème dynamique en quête de solutions flexibles et collaboratives :
-- **Freelances & Artisans :** Pour élargir leur réseau, optimiser leur temps disponible ou troquer des services pro.
-- **Étudiants :** Pour accéder à des services à moindre coût et monétiser leurs premiers talents.
-- **Particuliers :** Pour résoudre des besoins ponctuels du quotidien (bricolage, cours, tech) de manière économique.
-
----
-
-## ⚙️ Fonctionnalités Principales
-
-- 🚀 **Publication Express :** Création rapide de missions avec choix natif de l'option Troc vs Paiement dès le départ.
-- 💳 **Gestion Financière & Crédits :** Portefeuille de crédits virtuels pour le troc et système de paiement sécurisé avec séquestre (escrow) pour le cash.
-- 💬 **Outils Intégrés :** Messagerie instantanée en temps réel et planning collaboratif pour coordonner les interventions.
-- 🔒 **Confiance & Sécurité :** Profils entièrement vérifiés, système d'évaluations croisées et garanties pour assurer le bon déroulement des missions.
+The complete freedom to choose how you pay or get paid for a service:
+- **Skill Exchange (Skill-for-Skill):** Save your budget, showcase your own expertise, and build meaningful community connections.
+- **Instant Payment (Cash-for-Skill):** Prioritize speed, immediacy, and professional execution.
 
 ---
 
-## 📊 Modèle Économique (Monétisation)
+## 🎯 Target Audience
 
-Pour assurer sa croissance et sa viabilité, Swapster s'appuie sur des sources de revenus diversifiées :
-1. **Commissions :** Prélèvement d'un pourcentage standard sur les transactions monétaires (*cash-for-skill*).
-2. **Frais de conversion :** Micro-frais appliqués lors de l'achat ou de la conversion de crédits au sein de la place de marché du troc.
-3. **Abonnements Premium & B2B :** Formules payantes pour les professionnels (visibilité accrue) et solutions dédiées pour les entreprises.
+Swapster caters to a dynamic ecosystem looking for flexible and collaborative solutions:
+- **Freelancers & Artisans:** Expand networks, optimize unbilled downtime, or trade B2B services.
+- **Students:** Gain access to affordable services and monetize early-stage skills.
+- **Individuals:** Solve daily, one-off needs (home improvement, tutoring, tech help) cost-effectively.
+
+---
+
+## ⚙️ Core Features
+
+- 🚀 **Express Posting:** Quick assignment creation with a native option to choose Barter vs. Payment right from the start.
+- 💳 **Financial & Credit Management:** A virtual credit wallet for skill swapping and a secure escrow payment system for cash transactions.
+- 💬 **Integrated Tools:** Real-time instant messaging and collaborative scheduling to easily coordinate tasks.
+- 🔒 **Trust & Security:** Fully verified profiles, mutual review systems, and built-in protections to ensure smooth completion of every mission.
+
+---
+
+## 📊 Business Model (Monetization)
+
+To ensure sustainable growth and viability, Swapster relies on diversified revenue streams:
+1. **Commissions:** A standard transaction fee applied to cash-based jobs (*cash-for-skill*).
+2. **Conversion Fees:** Micro-fees applied when buying or converting credits within the barter ecosystem.
+3. **Premium & B2B Subscriptions:** Paid plans for professionals seeking higher visibility, alongside dedicated enterprise solutions.
 
 ---
 
 ## 📢 Baseline
 
-> *« Swapster — Échangez des compétences ou payez pour les obtenir. Simple, rapide, fiable. »*
+> *"Swapster — Swap skills or pay to get them. Simple, fast, reliable."*
