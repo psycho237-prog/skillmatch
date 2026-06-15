@@ -55,7 +55,7 @@ export default function Welcome() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView key={theme} style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
        
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -128,21 +128,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   image:{
-    position: 'relative',
-    marginTop:-35,
-    resizeMode:'stretch',
-    height:'50%',
     width: '100%',
+    height: 280,
+    resizeMode: 'contain',
+    marginTop: 10,
+    marginBottom: 10,
   },
   scroll: { 
     flexGrow: 1, 
-    height: '100%',
-    justifyContent: 'center' 
+    justifyContent: 'center',
+    paddingBottom: 24,
   },
   header: {
     paddingHorizontal: 24,
     alignItems: 'center',
-    marginTop: -30,
   },
   title: { marginBottom: 10 },
   desc: { marginBottom: 10 },
@@ -163,7 +162,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Rubik-Medium',
   },
   btn: { width: '100%', borderRadius: 30, marginTop: 0 },
   toggleBtn: {

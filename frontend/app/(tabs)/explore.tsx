@@ -83,7 +83,7 @@ export default function Explore() {
           <Image source={icons.backArrow} style={[styles.backIcon, { tintColor: colors.black1 }]} />
         </TouchableOpacity>
         <Typography variant="h4" style={styles.title}>{t('explore')}</Typography>
-        <View style={[styles.backBtn, { backgroundColor: colors.card }]} />{/* Empty view for alignment wrapper */}
+        <View style={styles.backBtn} />{/* Empty view for alignment wrapper */}
       </View>
 
       <View style={styles.searchRow}>
