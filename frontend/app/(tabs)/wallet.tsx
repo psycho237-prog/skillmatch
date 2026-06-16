@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../src/contexts/AppContext';
 import { api } from '../../src/services/api';
 import { icons } from '../../src/constants';
+import { CountryPicker } from '../../src/components/CountryPicker';
 
 export default function WalletScreen() {
   const { colors, user } = useApp();
@@ -26,7 +27,8 @@ export default function WalletScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
-  const [phone, setPhone] = useState(user?.phone_number || '');
+  const [countryCode, setCountryCode] = useState('237');
+  const [phone, setPhone] = useState('');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -61,11 +63,12 @@ export default function WalletScreen() {
 
     try {
       setProcessing(true);
+      const fullPhone = countryCode + phone.replace(/^0+/, '');
       if (modalType === 'deposit') {
-        await api.depositFunds(Number(amount), phone);
+        await api.depositFunds(Number(amount), fullPhone);
         Alert.alert('Success', 'Deposit successful (Sandbox)');
       } else {
-        await api.withdrawFunds(Number(amount), phone);
+        await api.withdrawFunds(Number(amount), fullPhone);
         Alert.alert('Success', 'Withdrawal successful (Sandbox)');
       }
       
@@ -97,8 +100,8 @@ export default function WalletScreen() {
     return (
       <View style={[styles.historyItem, { borderBottomColor: colors.border }]}>
         <View style={styles.historyLeft}>
-          <Text style={[styles.historyType, { color: colors.text }]}>{item.description}</Text>
-          <Text style={[styles.historyDate, { color: colors.textMuted }]}>{dateStr}</Text>
+          <Text style={[styles.historyType, { color: colors.black1 }]}>{item.description}</Text>
+          <Text style={[styles.historyDate, { color: colors.black3 }]}>{dateStr}</Text>
         </View>
         <View style={styles.historyRight}>
           <Text style={[styles.historyAmount, { color: amountColor }]}>
@@ -123,7 +126,7 @@ export default function WalletScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>My Wallet</Text>
+        <Text style={[styles.headerTitle, { color: colors.black1 }]}>My Wallet</Text>
       </View>
 
       {/* Balance Card */}
@@ -152,7 +155,7 @@ export default function WalletScreen() {
           <View style={[styles.actionIcon, { backgroundColor: colors.primary + '20' }]}>
             <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.primary }]} />
           </View>
-          <Text style={[styles.actionText, { color: colors.text }]}>Deposit</Text>
+          <Text style={[styles.actionText, { color: colors.black1 }]}>Deposit</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -162,15 +165,15 @@ export default function WalletScreen() {
           <View style={[styles.actionIcon, { backgroundColor: colors.danger + '20' }]}>
              <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.danger }]} />
           </View>
-          <Text style={[styles.actionText, { color: colors.text }]}>Withdraw</Text>
+          <Text style={[styles.actionText, { color: colors.black1 }]}>Withdraw</Text>
         </TouchableOpacity>
       </View>
 
       {/* History */}
       <View style={styles.historyContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Transactions</Text>
+        <Text style={[styles.sectionTitle, { color: colors.black1 }]}>Recent Transactions</Text>
         {history.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>No transactions yet</Text>
+          <Text style={[styles.emptyText, { color: colors.black3 }]}>No transactions yet</Text>
         ) : (
           <FlatList
             data={history}
@@ -193,35 +196,38 @@ export default function WalletScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <Text style={[styles.modalTitle, { color: colors.black1 }]}>
               {modalType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
             </Text>
-            <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>
+            <Text style={[styles.modalSubtitle, { color: colors.black3 }]}>
               Via Mobile Money (Sandbox)
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Amount ({balance?.currency || 'XAF'})</Text>
+              <Text style={[styles.inputLabel, { color: colors.black1 }]}>Amount ({balance?.currency || 'XAF'})</Text>
               <TextInput
-                style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                style={[styles.input, { color: colors.black1, borderColor: colors.border }]}
                 keyboardType="numeric"
                 value={amount}
                 onChangeText={setAmount}
                 placeholder="0"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.black3}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Mobile Money Number</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+237..."
-                placeholderTextColor={colors.textMuted}
-              />
+              <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <CountryPicker selectedCode={countryCode} onSelectCode={setCountryCode} />
+                <TextInput
+                  style={[styles.input, { flex: 1, color: colors.black1, borderColor: colors.border }]}
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="69..."
+                  placeholderTextColor={colors.black3}
+                />
+              </View>
             </View>
 
             <View style={styles.modalButtons}>
@@ -230,7 +236,7 @@ export default function WalletScreen() {
                 onPress={() => setModalVisible(false)}
                 disabled={processing}
               >
-                <Text style={{ color: colors.text, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
+                <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 

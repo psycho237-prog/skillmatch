@@ -1,9 +1,9 @@
 // SkillMatch Design Tokens — follows design.pdf exactly
 export const Colors = {
   light: {
-    primary: '#0061FF',
-    primaryLight: 'rgba(0, 97, 255, 0.10)',
-    primaryUltraLight: 'rgba(0, 97, 255, 0.04)',
+    primary: '#3B82F6', // Lighter blue
+    primaryLight: 'rgba(59, 130, 246, 0.10)',
+    primaryUltraLight: 'rgba(59, 130, 246, 0.04)',
     black1: '#191D31',
     black2: '#666876',
     black3: '#8C8E98',
@@ -27,30 +27,30 @@ export const Colors = {
     rating_color:'#000000ff',
   },
   dark: {
-     bg_rating:'#1f1e1eee',
+     bg_rating:'#2C2C2E',
      icon_bg: 'rgba(255,255,255,0.2)',
     rating_color:'#ffffffff',
-    primary: '#0061FF',
-    primaryLight: 'rgba(0, 97, 255, 0.20)',
-    primaryUltraLight: 'rgba(0, 97, 255, 0.08)',
-    black1: '#FFFFFF',
-    black2: '#B0B0B8',
-    black3: '#8C8E98',
-    bg_description: '#1A1A2E',
-    white: '#1A1A2E',
-    background: '#0F0F23',
-    card: '#1A1A2E',
-    border: '#2A2A3E',
-    danger: '#F75555',
-    pink: '#FF4B91',
-    success: '#4CAF50',
-    warning: '#FF9800',
-    star: '#FFB800',
-    inputBg: '#1A1A2E',
+    primary: '#3B82F6', // Lighter blue
+    primaryLight: 'rgba(59, 130, 246, 0.20)',
+    primaryUltraLight: 'rgba(59, 130, 246, 0.08)',
+    black1: '#FFFFFF', // Text is light (white) in dark mode
+    black2: '#E5E5EA', // Lighter secondary text
+    black3: '#AEAEB2', // Lighter tertiary text
+    bg_description: '#2C2C2E',
+    white: '#1C1C1E',
+    background: '#121212', // Gris / Dark grey background
+    card: '#1C1C1E',       // Slightly lighter grey for cards
+    border: '#2C2C2E',     // Divider grey
+    danger: '#FF453A',     // iOS dark mode red
+    pink: '#FF375F',
+    success: '#32D74B',
+    warning: '#FF9F0A',
+    star: '#FFD60A',
+    inputBg: '#2C2C2E',
     shadow: 'rgba(0, 0, 0, 0.3)',
     overlay: 'rgba(0, 0, 0, 0.7)',
-    tabBar: '#1A1A2E',
-    tabBarBorder: '#2A2A3E',
+    tabBar: '#1C1C1E',
+    tabBarBorder: '#2C2C2E',
   },
 };
 
