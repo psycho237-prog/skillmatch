@@ -49,24 +49,6 @@ services:
     depends_on:
       - postgres
 
-  otp-baileys-api:
-    build: ./otp-baileys-api
-    container_name: skillmatch_otp_api
-    restart: always
-    ports:
-      - "127.0.0.1:6003:4000"
-    environment:
-      - PORT=4000
-      - DATABASE_URL=postgres://skillmatch_user:skillmatch_password@postgres:5432/skillmatch
-      - REDIS_URL=redis://redis:6900
-      - JWT_SECRET=your_super_secret_jwt_key_in_production
-      - BAILEYS_STORE_PATH=./baileys_store
-      - SMS_PROVIDER=whatsapp
-    volumes:
-      - ./otp-baileys-api/baileys_store:/app/baileys_store
-    depends_on:
-      - postgres
-      - redis
 
   admin-panel:
     build: 
