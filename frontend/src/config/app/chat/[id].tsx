@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, TextInput, FlatList, KeyboardAvoidingView, Platform, Modal, TouchableWithoutFeedback, Alert, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useApp } from '../../src/contexts/AppContext';
-import { Typography } from '../../src/components/Typography';
-import { Button } from '../../src/components/Button';
-import { icons } from '../../src/constants';
-import { socketService } from '../../src/services/socket';
-import { api, resolveImageUrl } from '../../src/services/api';
-import { Language } from '../../src/i18n/translations';
+import { useApp } from '../../../contexts/AppContext';
+import { Typography } from '../../../components/Typography';
+import { Button } from '../../../components/Button';
+import { icons } from '../../../constants';
+import { socketService } from '../../../services/socket';
+import { api, resolveImageUrl } from '../../../services/api';
+import { Language } from '../../../i18n/translations';
 
 export default function ChatRoom() {
   const { id } = useLocalSearchParams();

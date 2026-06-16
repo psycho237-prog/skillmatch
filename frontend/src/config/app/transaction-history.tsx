@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, ActivityIndicator, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '../src/contexts/AppContext';
-import { Typography } from '../src/components/Typography';
-import { Button } from '../src/components/Button';
-import { icons } from '../src/constants';
-import { api, resolveImageUrl } from '../src/services/api';
+import { useApp } from '../../contexts/AppContext';
+import { Typography } from '../../components/Typography';
+import { Button } from '../../components/Button';
+import { icons } from '../../constants';
+import { api, resolveImageUrl } from '../../services/api';
 
 export default function TransactionHistoryScreen() {
   const router = useRouter();
@@ -244,7 +244,7 @@ export default function TransactionHistoryScreen() {
 
                   <View style={{ flexDirection: 'row' }}>
                     {item.ratingPending && item.escrow?.status === 'COMPLETED' && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: colors.primary, marginRight: 8 }]}
                         onPress={() => handleOpenRating(item.escrow.id, item.counterparty?.id, item.counterparty?.name)}
                       >
@@ -253,7 +253,7 @@ export default function TransactionHistoryScreen() {
                     )}
 
                     {item.escrow && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
                         onPress={() => toggleExpand(item.transactionId)}
                       >
@@ -331,15 +331,15 @@ export default function TransactionHistoryScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]} 
+              <TouchableOpacity
+                style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]}
                 onPress={handleSkipRating}
               >
                 <Typography variant="body2" color={colors.black2}>Skip</Typography>
               </TouchableOpacity>
-              <Button 
-                title="Submit" 
-                onPress={handleSubmitRating} 
+              <Button
+                title="Submit"
+                onPress={handleSubmitRating}
                 loading={submittingRating}
                 style={{ flex: 1, marginLeft: 12 }}
               />

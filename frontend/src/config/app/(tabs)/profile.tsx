@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Share, Linking, Modal, Pressable, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api, resolveImageUrl } from '../../src/services/api';
+import { api, resolveImageUrl } from '../../../services/api';
 import { useRouter } from 'expo-router';
-import { useApp } from '../../src/contexts/AppContext';
-import { Typography } from '../../src/components/Typography';
-import { icons } from '../../src/constants';
+import { useApp } from '../../../contexts/AppContext';
+import { Typography } from '../../../components/Typography';
+import { icons } from '../../../constants';
 
 export default function Profile() {
   const { colors, t, user, setUser, themePreference, setThemePreference, language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useApp();
   const router = useRouter();
-  
+
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [requirementsModalVisible, setRequirementsModalVisible] = useState(false);
@@ -52,10 +52,10 @@ export default function Profile() {
 
         // 1. Update on server
         const updateRes = await api.updateUser(userId, { avatar_url: serverUrl });
-        
+
         // 2. Update local state with fresh data from server
         await setUser(updateRes.user, undefined);
-        
+
       } catch (e: any) {
         console.error('Failed to update avatar', e);
         alert('Upload failed: ' + e.message);
@@ -106,21 +106,21 @@ export default function Profile() {
     { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
     { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
     { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
-    { icon: icons.person, title: t('profile'), action: () => {} },
-    { 
-      icon: icons.bell, 
-      title: t('notifications_setting'), 
-      rightElement: <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ true: colors.primary }} /> 
+    { icon: icons.person, title: t('profile'), action: () => { } },
+    {
+      icon: icons.bell,
+      title: t('notifications_setting'),
+      rightElement: <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ true: colors.primary }} />
     },
-    { 
-      icon: icons.language, 
-      title: t('language'), 
+    {
+      icon: icons.language,
+      title: t('language'),
       action: () => setLangModalVisible(true),
       rightText: getLangText()
     },
-    { 
+    {
       icon: icons.edit, // Reusing an icon for theme toggle mock
-      title: t('theme'), 
+      title: t('theme'),
       action: () => setThemeModalVisible(true),
       rightText: getThemeText()
     },
@@ -139,13 +139,13 @@ export default function Profile() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        
+
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: resolveImageUrl(user?.avatar_url) }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: resolveImageUrl(user?.avatar_url) }}
+              style={styles.avatar}
             />
             <TouchableOpacity style={[styles.editAvatarBtn, { backgroundColor: colors.primary, borderColor: colors.background }]} onPress={pickImage}>
               <Image source={icons.edit} style={styles.editIcon} />
@@ -157,8 +157,8 @@ export default function Profile() {
         {/* Menu Items */}
         <View style={styles.menuList}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={styles.menuItem}
               onPress={item.action}
               disabled={!item.action}
@@ -191,9 +191,9 @@ export default function Profile() {
       </ScrollView>
 
       {/* Language Modal */}
-      <SelectionModal 
-        visible={langModalVisible} 
-        onClose={() => setLangModalVisible(false)} 
+      <SelectionModal
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
         title={t('language')}
         options={[
           { label: t('english'), value: 'en' },
@@ -212,9 +212,9 @@ export default function Profile() {
       />
 
       {/* Theme Modal */}
-      <SelectionModal 
-        visible={themeModalVisible} 
-        onClose={() => setThemeModalVisible(false)} 
+      <SelectionModal
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
         title={t('theme')}
         options={[
           { label: t('theme_light'), value: 'light' },
@@ -253,7 +253,7 @@ export default function Profile() {
                   <Typography variant="body2" color={colors.black2} style={{ marginBottom: 12 }}>
                     You are {Math.round((readinessData.score / readinessData.total) * 100)}% ready to transact.
                   </Typography>
-                  
+
                   {/* Progress Bar */}
                   <View style={{ height: 8, width: '100%', backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
                     <View style={{ height: '100%', width: `${(readinessData.score / readinessData.total) * 100}%`, backgroundColor: colors.primary }} />
@@ -261,9 +261,9 @@ export default function Profile() {
                 </View>
 
                 {/* Checklist items */}
-                <ChecklistItem 
-                  checked={readinessData.phoneVerified} 
-                  title="Phone number verified" 
+                <ChecklistItem
+                  checked={readinessData.phoneVerified}
+                  title="Phone number verified"
                   desc="Required for PawaPay transactions"
                   onFix={() => {
                     setRequirementsModalVisible(false);
@@ -272,9 +272,9 @@ export default function Profile() {
                   colors={colors}
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.mobileNetworkDetected} 
-                  title="Mobile network detected" 
+                <ChecklistItem
+                  checked={readinessData.mobileNetworkDetected}
+                  title="Mobile network detected"
                   desc="Correspondent auto-detected on profile"
                   onFix={() => {
                     setRequirementsModalVisible(false);
@@ -283,9 +283,9 @@ export default function Profile() {
                   colors={colors}
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.profilePhotoUploaded} 
-                  title="Profile photo uploaded" 
+                <ChecklistItem
+                  checked={readinessData.profilePhotoUploaded}
+                  title="Profile photo uploaded"
                   desc="A valid avatar image is set"
                   onFix={() => {
                     setRequirementsModalVisible(false);
@@ -294,9 +294,9 @@ export default function Profile() {
                   colors={colors}
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.servicePosted} 
-                  title="At least one service posted" 
+                <ChecklistItem
+                  checked={readinessData.servicePosted}
+                  title="At least one service posted"
                   desc="You have published an offering"
                   onFix={() => {
                     setRequirementsModalVisible(false);
@@ -305,9 +305,9 @@ export default function Profile() {
                   colors={colors}
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.holdupAmountSet} 
-                  title="Escrow hold set on all services" 
+                <ChecklistItem
+                  checked={readinessData.holdupAmountSet}
+                  title="Escrow hold set on all services"
                   desc="No service has a null/zero holdup amount"
                   onFix={() => {
                     setRequirementsModalVisible(false);
@@ -316,9 +316,9 @@ export default function Profile() {
                   colors={colors}
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.walletFunded} 
-                  title="Wallet is funded" 
+                <ChecklistItem
+                  checked={readinessData.walletFunded}
+                  title="Wallet is funded"
                   desc="Wallet balance must be greater than 0"
                   onFix={async () => {
                     try {
@@ -336,9 +336,9 @@ export default function Profile() {
                   fixLabel="TOP UP"
                 />
 
-                <ChecklistItem 
-                  checked={readinessData.identityVerified} 
-                  title="Identity verified" 
+                <ChecklistItem
+                  checked={readinessData.identityVerified}
+                  title="Identity verified"
                   desc="Name matches mobile money account"
                   onFix={async () => {
                     if (!user) return;

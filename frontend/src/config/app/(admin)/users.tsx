@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useApp } from '../../src/contexts/AppContext';
-import { api } from '../../src/services/api';
+import { useApp } from '../../../contexts/AppContext';
+import { api } from '../../../services/api';
 
 export default function AdminUsers() {
   const { colors } = useApp();

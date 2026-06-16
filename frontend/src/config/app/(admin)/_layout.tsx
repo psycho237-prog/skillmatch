@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Image, StyleSheet } from 'react-native';
-import { useApp } from '../../src/contexts/AppContext';
-import { icons } from '../../src/constants';
+import { useApp } from '../../../contexts/AppContext';
+import { icons } from '../../../constants';
 
 export default function AdminLayout() {
   const { colors } = useApp();

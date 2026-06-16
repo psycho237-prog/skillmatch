@@ -15,16 +15,16 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useApp } from '../../src/contexts/AppContext';
-import { api } from '../../src/services/api';
-import { icons } from '../../src/constants';
+import { useApp } from '../../../contexts/AppContext';
+import { api } from '../../../services/api';
+import { icons } from '../../../constants';
 
 export default function WalletScreen() {
   const { colors, user } = useApp();
   const [balance, setBalance] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'deposit' | 'withdraw'>('deposit');
@@ -41,7 +41,7 @@ export default function WalletScreen() {
       setLoading(true);
       const balanceRes = await api.getWalletBalance();
       setBalance(balanceRes);
-      
+
       const historyRes = await api.getWalletHistory();
       setHistory(historyRes.history || []);
     } catch (error: any) {
@@ -71,7 +71,7 @@ export default function WalletScreen() {
         await api.withdrawFunds(Number(amount), phone);
         Alert.alert('Success', 'Withdrawal successful (Sandbox)');
       }
-      
+
       setModalVisible(false);
       setAmount('');
       fetchWalletData();
@@ -135,7 +135,7 @@ export default function WalletScreen() {
         <Text style={styles.cardBalance}>
           {Number(balance?.balance || 0).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
         </Text>
-        
+
         {Number(balance?.pending_balance) > 0 && (
           <View style={styles.pendingContainer}>
             <Text style={styles.pendingLabel}>Pending (Escrow):</Text>
@@ -148,7 +148,7 @@ export default function WalletScreen() {
 
       {/* Actions */}
       <View style={styles.actionsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: colors.card }]}
           onPress={() => openModal('deposit')}
         >
@@ -158,12 +158,12 @@ export default function WalletScreen() {
           <Text style={[styles.actionText, { color: colors.black1 }]}>Deposit</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: colors.card }]}
           onPress={() => openModal('withdraw')}
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.danger + '20' }]}>
-             <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.danger }]} />
+            <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.danger }]} />
           </View>
           <Text style={[styles.actionText, { color: colors.black1 }]}>Withdraw</Text>
         </TouchableOpacity>
@@ -224,7 +224,7 @@ export default function WalletScreen() {
                   />
                 </View>
               </View>
-   
+
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
                 <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
@@ -240,15 +240,15 @@ export default function WalletScreen() {
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.modalBtn, { backgroundColor: colors.border }]}
                   onPress={() => setModalVisible(false)}
                   disabled={processing}
                 >
                   <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.modalBtn, { backgroundColor: colors.primary }]}
                   onPress={handleTransaction}
                   disabled={processing}

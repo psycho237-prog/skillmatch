@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Animated, useWindowDimensions, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useApp } from '../../src/contexts/AppContext';
-import { Typography } from '../../src/components/Typography';
-import { Button } from '../../src/components/Button';
-import { Loader } from '../../src/components/Loader';
-import { icons, images } from '../../src/constants';
-import { api, resolveImageUrl } from '../../src/services/api';
+import { useApp } from '../../../contexts/AppContext';
+import { Typography } from '../../../components/Typography';
+import { Button } from '../../../components/Button';
+import { Loader } from '../../../components/Loader';
+import { icons, images } from '../../../constants';
+import { api, resolveImageUrl } from '../../../services/api';
 
 export default function ServiceDetail() {
   const { width } = useWindowDimensions();
@@ -86,10 +86,10 @@ export default function ServiceDetail() {
     if (!service) return '';
     if (service.price_type === 'exchange') return t('exchange');
     if (service.price_type === 'negotiable') return t('negotiable');
-    
+
     const symbol = getCurrencySymbol(service.currency || 'USD');
     const suffix = service.price_type === 'hourly' ? t('per_hour') : '';
-    
+
     if (service.currency === 'XAF') {
       return `${service.price}${suffix} ${symbol}`;
     }
@@ -100,7 +100,7 @@ export default function ServiceDetail() {
     if (Platform.OS === 'web') {
       window.alert(`${title}: ${message}`);
       if (buttons && buttons.length > 0 && buttons[0].onPress) {
-         // Fallback logic could go here
+        // Fallback logic could go here
       }
     } else {
       Alert.alert(title, message, buttons);
@@ -167,12 +167,12 @@ export default function ServiceDetail() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        
+
         {/* Top Image & Header */}
         <View style={styles.imageContainer}>
-          <ScrollView 
-            horizontal 
-            pagingEnabled 
+          <ScrollView
+            horizontal
+            pagingEnabled
             contentOffset={{ x: activeImage * width, y: 0 }}
             onMomentumScrollEnd={(e) => {
               const nextIndex = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -181,7 +181,7 @@ export default function ServiceDetail() {
             showsHorizontalScrollIndicator={false}
           >
             {service.images.map((img: string, i: number) => (
-              <Image key={i} source={{ uri: resolveImageUrl(img) }} style={[styles.mainImage, { width }]} resizeMode='cover'/>
+              <Image key={i} source={{ uri: resolveImageUrl(img) }} style={[styles.mainImage, { width }]} resizeMode='cover' />
             ))}
           </ScrollView>
 
@@ -200,14 +200,14 @@ export default function ServiceDetail() {
               )}
             </>
           )}
-          
+
           <View style={styles.imageOverlay}>
             <View style={styles.header}>
-              <TouchableOpacity style={[styles.iconBtn,{backgroundColor: colors.icon_bg}]} onPress={() => router.back()}>
+              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.icon_bg }]} onPress={() => router.back()}>
                 <Image source={icons.backArrow} style={styles.icon} />
               </TouchableOpacity>
               <Typography variant="h5" color="white">{t('detail')}</Typography>
-              <TouchableOpacity onPress={handleToggleFavorite} style={[styles.iconBtn,{backgroundColor:colors.icon_bg}]}>
+              <TouchableOpacity onPress={handleToggleFavorite} style={[styles.iconBtn, { backgroundColor: colors.icon_bg }]}>
                 <Image source={!!service.is_favorited ? icons.heartFilled : icons.heart} style={[styles.icon, !!service.is_favorited && { tintColor: colors.pink }]} />
               </TouchableOpacity>
             </View>
@@ -215,12 +215,12 @@ export default function ServiceDetail() {
             {service.images.length > 1 && (
               <View style={styles.pagination}>
                 {service.images.map((_: any, i: number) => (
-                  <View 
-                    key={i} 
+                  <View
+                    key={i}
                     style={[
-                      styles.dot, 
+                      styles.dot,
                       { backgroundColor: i === activeImage ? colors.primary : 'rgba(255,255,255,0.5)' }
-                    ]} 
+                    ]}
                   />
                 ))}
               </View>
@@ -228,7 +228,7 @@ export default function ServiceDetail() {
           </View>
         </View>
 
-        <View style={[styles.content, {backgroundColor: colors.bg_description}]}>
+        <View style={[styles.content, { backgroundColor: colors.bg_description }]}>
           <Typography variant="h3" style={styles.title}>{service.title}</Typography>
           <TouchableOpacity style={styles.ratingRow} onPress={showRatePrompt}>
             <Image source={icons.star} style={styles.starIcon} />
@@ -237,34 +237,34 @@ export default function ServiceDetail() {
               ({service.review_count} {t('reviews')})
             </Typography>
             <View style={[styles.likesBadge, { backgroundColor: colors.pink + '20' }]}>
-                <Image source={icons.heart} style={[styles.miniHeart, { tintColor: colors.pink }]} />
-                <Typography variant="body2" weight="bold" color={colors.pink}>{Number(service.likes_count || 0)}</Typography>
+              <Image source={icons.heart} style={[styles.miniHeart, { tintColor: colors.pink }]} />
+              <Typography variant="body2" weight="bold" color={colors.pink}>{Number(service.likes_count || 0)}</Typography>
             </View>
             <Typography variant="body2" color={colors.black3} style={{ marginLeft: 8 }}>
-                • {t('tap_to_rate')}
+              • {t('tap_to_rate')}
             </Typography>
           </TouchableOpacity>
 
-           <View style={styles.section}>
-              <Typography variant="h5" style={styles.sectionTitle}>{t('description')}</Typography>
-              <Typography variant="body1" color={colors.black2} style={{ lineHeight: 28 }}>
-                 {service.description}
-              </Typography>
-           </View>
+          <View style={styles.section}>
+            <Typography variant="h5" style={styles.sectionTitle}>{t('description')}</Typography>
+            <Typography variant="body1" color={colors.black2} style={{ lineHeight: 28 }}>
+              {service.description}
+            </Typography>
+          </View>
 
-           {service.service_type && (
-             <View style={styles.section}>
-               <Typography variant="h5" style={styles.sectionTitle}>Escrow Settings</Typography>
-               <View style={[styles.barterBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                 <Typography variant="body1" color={colors.black1} style={{ marginBottom: 4 }}>
-                   <Typography weight="bold">Type:</Typography> {service.service_type === 'SKILL_TO_CASH' ? 'Skill-to-Cash' : 'Skill-to-Skill'}
-                 </Typography>
-                 <Typography variant="body1" color={colors.black1}>
-                   <Typography weight="bold">Commitment Hold:</Typography> {service.holdup_amount} {service.currency || 'XAF'}
-                 </Typography>
-               </View>
-             </View>
-           )}
+          {service.service_type && (
+            <View style={styles.section}>
+              <Typography variant="h5" style={styles.sectionTitle}>Escrow Settings</Typography>
+              <View style={[styles.barterBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Typography variant="body1" color={colors.black1} style={{ marginBottom: 4 }}>
+                  <Typography weight="bold">Type:</Typography> {service.service_type === 'SKILL_TO_CASH' ? 'Skill-to-Cash' : 'Skill-to-Skill'}
+                </Typography>
+                <Typography variant="body1" color={colors.black1}>
+                  <Typography weight="bold">Commitment Hold:</Typography> {service.holdup_amount} {service.currency || 'XAF'}
+                </Typography>
+              </View>
+            </View>
+          )}
 
           {service.price_type === 'exchange' && service.barter_skill && (
             <View style={styles.section}>
@@ -399,8 +399,8 @@ export default function ServiceDetail() {
           <Typography variant="h2" color={colors.primary} numberOfLines={1}>{formatPrice()}</Typography>
         </View>
         {user?.id === service.user_id || user?.id === service.users?.id ? (
-          <Button 
-            title="Delete Service" 
+          <Button
+            title="Delete Service"
             onPress={async () => {
               Alert.alert(
                 "Delete Service",
@@ -426,14 +426,14 @@ export default function ServiceDetail() {
                   }
                 ]
               );
-            }} 
+            }}
             style={[styles.bookBtn, { backgroundColor: colors.danger }]}
             loading={loading}
           />
         ) : (
-          <Button 
-            title={t('contact_now')} 
-            onPress={handleContact} 
+          <Button
+            title={t('contact_now')}
+            onPress={handleContact}
             style={styles.bookBtn}
             loading={loading}
           />

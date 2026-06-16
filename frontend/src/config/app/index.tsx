@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { useApp } from '../src/contexts/AppContext';
+import { useApp } from '../../contexts/AppContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -206,7 +206,7 @@ export default function Index() {
 
         {/* Text section */}
         <Animated.View style={[styles.textSection, { opacity: logoOpacity }]}>
-          <Text style={[styles.brandName, { color:  '#FFFFFF' }]}>
+          <Text style={[styles.brandName, { color: '#FFFFFF' }]}>
             Swapster
           </Text>
 

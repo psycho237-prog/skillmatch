@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '../../src/contexts/AppContext';
-import { Typography } from '../../src/components/Typography';
-import { api, resolveImageUrl } from '../../src/services/api';
-import { socketService } from '../../src/services/socket';
+import { useApp } from '../../../contexts/AppContext';
+import { Typography } from '../../../components/Typography';
+import { api, resolveImageUrl } from '../../../services/api';
+import { socketService } from '../../../services/socket';
 
 export default function ChatList() {
   const { colors, t, user } = useApp();
