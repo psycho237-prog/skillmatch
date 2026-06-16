@@ -43,8 +43,13 @@ export default function Profile() {
   const handleInvite = async () => {
     try {
       await Share.share({
+<<<<<<< HEAD
         message: 'Join me on Swapster! ' + 'swapster.bridge.dev',
         url: 'https://swapster.bridge.dev', // iOS
+=======
+        message: 'Join me on Swapster! ' + 'https://swapster.greenfarmers.works',
+        url: 'https://swapster.greenfarmers.works', // iOS
+>>>>>>> e31deed552188212fb9532e35533602adb1fea82
       });
     } catch (e) {
       console.error(e);
@@ -52,7 +57,11 @@ export default function Profile() {
   };
 
   const handleHelp = () => {
+<<<<<<< HEAD
     Linking.openURL('https://swapster.bridge.dev/help');
+=======
+    Linking.openURL('//https://swapster.greenfarmers.works/help');
+>>>>>>> e31deed552188212fb9532e35533602adb1fea82
   };
 
   const getThemeText = () => {

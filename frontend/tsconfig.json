@@ -23,5 +23,10 @@
     "jest.config.js",
     "android",
     "ios"
+<<<<<<< HEAD
   ]
+=======
+  ],
+  "extends": "expo/tsconfig.base"
+>>>>>>> e31deed552188212fb9532e35533602adb1fea82
 }
