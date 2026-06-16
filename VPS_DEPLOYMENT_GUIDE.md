@@ -67,11 +67,10 @@ Ensure you update variables like:
 
 ## Step 3: Build and Start Containers
 
-Start your complete containerized ecosystem (PostgreSQL, Redis, Backend, Admin Panel, OTP API):
 ```bash
 docker compose up -d --build
 ```
-*(Note: Ensure that ports 3111, 6001, 6002, 6003, and 6379 are available on your VPS).*
+*(Les conteneurs sont configurés pour n'écouter qu'en interne sur 127.0.0.1. Seuls les ports 80 et 443 ont besoin d'être ouverts sur votre VPS pour Nginx).*
 
 To check that all services are running:
 ```bash
