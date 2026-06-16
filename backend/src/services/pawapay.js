@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || 'sandbox_test_token_placeholder';
+const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || process.env.PAWAPAY_API_KEY || 'sandbox_test_token_placeholder';
 const BASE_URL = 'https://api.sandbox.pawapay.io';
 
 /**
