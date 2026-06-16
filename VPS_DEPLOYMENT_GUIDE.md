@@ -67,11 +67,10 @@ Ensure you update variables like:
 
 ## Step 3: Build and Start Containers
 
-Start your complete containerized ecosystem (PostgreSQL, Redis, Backend, Admin Panel, OTP API):
 ```bash
 docker compose up -d --build
 ```
-*(Note: Ensure that ports 3001, 4000, 8080, 5432, and 6379 are available on your VPS).*
+*(Les conteneurs sont configurés pour n'écouter qu'en interne sur 127.0.0.1. Seuls les ports 80 et 443 ont besoin d'être ouverts sur votre VPS pour Nginx).*
 
 To check that all services are running:
 ```bash
@@ -95,7 +94,7 @@ server {
     server_name api.greenfarmers.works;
 
     location / {
-        proxy_pass http://localhost:3001; # Routes to Backend container
+        proxy_pass http://localhost:3111; # Routes to Backend container
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -115,7 +114,7 @@ server {
     server_name admin.greenfarmers.works;
 
     location / {
-        proxy_pass http://localhost:8080; # Routes to Admin Panel container
+        proxy_pass http://localhost:6002; # Routes to Admin Panel container
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -136,7 +135,7 @@ server {
     server_name otp.greenfarmers.works;
 
     location / {
-        proxy_pass http://localhost:4000; # Routes to OTP API container
+        proxy_pass http://localhost:6003; # Routes to OTP API container
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
