@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: skillmatch_password
       POSTGRES_DB: skillmatch
     ports:
-      - "3775:5432"
+      - "127.0.0.1:6001:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/local_schema.sql:/docker-entrypoint-initdb.d/init.sql
@@ -19,8 +19,9 @@ services:
     image: redis:7-alpine
     container_name: skillmatch_redis
     restart: always
+    command: redis-server --port 6900
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6900:6900"
     volumes:
       - redisdata:/data
 
@@ -29,7 +30,7 @@ services:
     container_name: skillmatch_backend
     restart: always
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3111:3001"
     environment:
       - PORT=3001
       - DB_USER=skillmatch_user
@@ -52,11 +53,11 @@ services:
     container_name: skillmatch_otp_api
     restart: always
     ports:
-      - "4000:4000"
+      - "127.0.0.1:6003:4000"
     environment:
       - PORT=4000
       - DATABASE_URL=postgres://skillmatch_user:skillmatch_password@postgres:5432/skillmatch
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://redis:6900
       - JWT_SECRET=your_super_secret_jwt_key_in_production
       - BAILEYS_STORE_PATH=./baileys_store
       - SMS_PROVIDER=whatsapp
@@ -73,9 +74,9 @@ services:
     container_name: skillmatch_admin
     restart: always
     ports:
-      - "8080:8080" # Exposed to 8080
+      - "127.0.0.1:6002:8080" # Exposed securely only locally
     environment:
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=http://localhost:3111/api
 
 volumes:
   pgdata:
