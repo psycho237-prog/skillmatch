@@ -27,7 +27,7 @@ export default function AdminDisputes() {
   const handleResolve = (id: string, resolution: string) => {
     Alert.prompt(
       'Resolve Dispute',
-      \`Confirm resolving as "\${resolution}". Provide a reason:\`,
+      `Confirm resolving as "${resolution}". Provide a reason:`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 

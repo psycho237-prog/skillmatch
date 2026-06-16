@@ -67,9 +67,9 @@ export default function AdminDashboard() {
       {/* Commissions Section */}
       <Text style={[styles.groupTitle, { color: colors.text }]}>Commissions & Revenue</Text>
       <View style={styles.grid}>
-        {renderCard('Total Revenue', \`\${stats?.commissions?.total?.toLocaleString()} XAF\`, 'All time', '#14b8a6')}
-        {renderCard('Today', \`\${stats?.commissions?.today?.toLocaleString()} XAF\`, 'Last 24h', '#14b8a6')}
-        {renderCard('This Month', \`\${stats?.commissions?.month?.toLocaleString()} XAF\`, 'Last 30 days', '#14b8a6')}
+        {renderCard('Total Revenue', `${stats?.commissions?.total?.toLocaleString()} XAF`, 'All time', '#14b8a6')}
+        {renderCard('Today', `${stats?.commissions?.today?.toLocaleString()} XAF`, 'Last 24h', '#14b8a6')}
+        {renderCard('This Month', `${stats?.commissions?.month?.toLocaleString()} XAF`, 'Last 30 days', '#14b8a6')}
       </View>
 
     </ScrollView>

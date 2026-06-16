@@ -92,7 +92,7 @@ export default function WalletScreen() {
 
     // Format date
     const date = new Date(item.created_at);
-    const dateStr = \`\${date.toLocaleDateString()} \${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\`;
+    const dateStr = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     return (
       <View style={[styles.historyItem, { borderBottomColor: colors.border }]}>

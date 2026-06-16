@@ -27,7 +27,7 @@ export default function AdminUsers() {
   const handleStatusChange = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     Alert.prompt(
-      \`Change status to \${newStatus}\`,
+      `Change status to ${newStatus}`,
       'Please provide a reason:',
       [
         { text: 'Cancel', style: 'cancel' },
