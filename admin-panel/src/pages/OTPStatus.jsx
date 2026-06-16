@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import api from '../api';
+import { api } from '../api';
 
 export default function OTPStatus() {
   const [status, setStatus] = useState('connecting');
@@ -9,8 +9,7 @@ export default function OTPStatus() {
 
   const fetchStatus = async () => {
     try {
-      const res = await api.get('/auth/status');
-      const data = res.data;
+      const data = await api.request('/auth/status');
       setStatus(data.status);
       setQr(data.qr);
       setError(null);
