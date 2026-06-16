@@ -6,6 +6,7 @@ import Transactions from './pages/Transactions';
 import Disputes from './pages/Disputes';
 import WalletOps from './pages/WalletOps';
 import Logs from './pages/Logs';
+import OTPStatus from './pages/OTPStatus';
 
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',    icon: '📊' },
@@ -14,6 +15,7 @@ const NAV = [
   { id: 'disputes',     label: 'Disputes',     icon: '⚠️' },
   { id: 'wallet-ops',   label: 'Wallet Ops',   icon: '🏦' },
   { id: 'logs',         label: 'Activity Logs',icon: '📋' },
+  { id: 'otp-gateway',  label: 'OTP Gateway',  icon: '📱' },
 ];
 
 export default function App() {
@@ -44,6 +46,7 @@ export default function App() {
       case 'disputes':     return <Disputes />;
       case 'wallet-ops':   return <WalletOps />;
       case 'logs':         return <Logs />;
+      case 'otp-gateway':  return <OTPStatus />;
       default:             return <Dashboard />;
     }
   };

@@ -51,11 +51,19 @@ export async function initBaileys() {
   store.readFromFile && store.readFromFile(`${STORE_PATH}/baileys_store.json`);
   store.bind(sock.ev);
 
+export let currentQR: string | null = null;
+export let connectionState: string = 'connecting';
+
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
-    if (qr) qrcode.generate(qr, { small: true });
+    if (qr) {
+      currentQR = qr;
+      qrcode.generate(qr, { small: true });
+    }
     
     if (connection === 'close') {
+      connectionState = 'disconnected';
+      currentQR = null;
       const reason = (lastDisconnect?.error as Boom)?.output?.statusCode ?? 0;
       console.log('Baileys connection closed', reason, lastDisconnect?.error);
       
@@ -68,6 +76,8 @@ export async function initBaileys() {
         setTimeout(() => initBaileys().catch(console.error), 5000);
       }
     } else if (connection === 'open') {
+      connectionState = 'connected';
+      currentQR = null;
       console.log('Baileys connected.');
     }
   });
