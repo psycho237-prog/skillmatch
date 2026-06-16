@@ -39,7 +39,7 @@ services:
       - DB_NAME=skillmatch
       - JWT_SECRET=your_super_secret_jwt_key_in_production
       - WHATSAPP_SESSION_PATH=./whatsapp-auth
-      - PAWAPAY_API_KEY=your_production_pawapay_key
+      - PAWAPAY_API_KEY=eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzEzNjU3NywiaWF0IjoxNzgxNTE3Mzc3LCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0OTk2OGRmMS0wY2IzLTRhYmQtYWU3OS00ODNiODQ5ZDFiMGYifQ.eKitlpRdi_S02_OuSwDuYas1mCeysrGfn9Xv3yieNGRgfVK8kJL2l7Vq5KnWg0qn_fF43R1mrbpVRYAOgsOIMw
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/whatsapp-auth:/app/whatsapp-auth
