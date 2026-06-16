@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: skillmatch_password
       POSTGRES_DB: skillmatch
     ports:
-      - "5432:5432"
+      - "3775:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/local_schema.sql:/docker-entrypoint-initdb.d/init.sql
