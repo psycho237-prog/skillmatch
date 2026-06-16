@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import api from '../api';
 
 export default function OTPStatus() {
   const [status, setStatus] = useState('connecting');
   const [qr, setQr] = useState(null);
   const [error, setError] = useState(null);
 
-  const OTP_API_URL = import.meta.env.VITE_OTP_API_URL || 'http://localhost:6003/api';
-
   const fetchStatus = async () => {
     try {
-      const res = await fetch(`${OTP_API_URL}/status`);
-      if (!res.ok) throw new Error('API OTP injoignable');
-      const data = await res.json();
+      const res = await api.get('/auth/status');
+      const data = res.data;
       setStatus(data.status);
       setQr(data.qr);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || err.message);
       setStatus('disconnected');
       setQr(null);
     }

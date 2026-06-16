@@ -69,11 +69,9 @@ router.post('/send-otp', async (req, res) => {
       console.error('WhatsApp send error:', err);
     }
 
-    const allowReturn = process.env.NODE_ENV !== 'production' || process.env.SMS_ALLOW_RETURN_OTP === 'true';
     return res.json({
       ok: true,
-      sent,
-      debug_otp: allowReturn ? code : undefined,
+      sent
     });
   } catch (error) {
     console.error('Send OTP error:', error);
