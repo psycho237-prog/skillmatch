@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations, Language, TranslationKey } from '../i18n/translations';
 import { Colors, ThemeName, ColorScheme } from '../constants/Colors';
@@ -70,10 +70,20 @@ const STORAGE_KEYS = {
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const systemColorScheme = useColorScheme();
+  const [systemColorScheme, setSystemColorScheme] = useState(Appearance.getColorScheme());
   const [user, setUserState] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
-  const [themePreference, setThemePrefState] = useState<'system' | 'light' | 'dark'>('light');
+  const [themePreference, setThemePrefState] = useState<'system' | 'light' | 'dark'>('system');
+
+  // Monitor system color scheme changes dynamically
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemColorScheme(colorScheme);
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
   const [language, setLangState] = useState<Language>('en');
   const [notificationsEnabled, setNotifState] = useState(true);
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
@@ -237,7 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       await AsyncStorage.removeItem(STORAGE_KEYS.USER);
       await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
-      setThemePrefState('light');
+      setThemePrefState('system');
       await AsyncStorage.removeItem(STORAGE_KEYS.THEME);
     }
   };
