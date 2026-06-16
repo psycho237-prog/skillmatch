@@ -1,0 +1,6 @@
+node_modules
+baileys_store
+uploads
+*.log
+.env
+.git
