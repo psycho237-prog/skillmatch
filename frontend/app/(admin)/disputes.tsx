@@ -27,12 +27,12 @@ export default function AdminDisputes() {
   const handleResolve = (id: string, resolution: string) => {
     Alert.prompt(
       'Resolve Dispute',
-      \`Confirm resolving as "\${resolution}". Provide a reason:\`,
+      `Confirm resolving as "${resolution}". Provide a reason:`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: async (reason) => {
+          onPress: async (reason?: string) => {
             if (!reason) return Alert.alert('Error', 'Reason is required');
             try {
               await api.resolveAdminDispute(id, resolution, reason);
@@ -50,7 +50,7 @@ export default function AdminDisputes() {
   const renderItem = ({ item }: { item: any }) => (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.cardHeader}>
-        <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+        <Text style={[styles.title, { color: colors.black1 }]}>{item.title}</Text>
         <Text style={[styles.status, { 
           color: item.status === 'resolved' ? '#10b981' : '#ef4444' 
         }]}>
@@ -58,8 +58,8 @@ export default function AdminDisputes() {
         </Text>
       </View>
       
-      <Text style={{ color: colors.textMuted, marginBottom: 8 }}>Amount: {Number(item.amount).toLocaleString()} XAF</Text>
-      <Text style={{ color: colors.textMuted, marginBottom: 16 }}>Reason: {item.dispute_reason || 'No reason provided'}</Text>
+      <Text style={{ color: colors.black2, marginBottom: 8 }}>Amount: {Number(item.amount).toLocaleString()} XAF</Text>
+      <Text style={{ color: colors.black2, marginBottom: 16 }}>Reason: {item.dispute_reason || 'No reason provided'}</Text>
       
       {item.status === 'disputed' && (
         <View style={styles.actions}>

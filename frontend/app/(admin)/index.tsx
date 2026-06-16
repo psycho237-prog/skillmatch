@@ -36,42 +36,42 @@ export default function AdminDashboard() {
 
   const renderCard = (title: string, value: string | number, subtitle?: string, color: string = colors.primary) => (
     <View style={[styles.card, { backgroundColor: colors.card, borderLeftColor: color, borderLeftWidth: 4 }]}>
-      <Text style={[styles.cardTitle, { color: colors.textMuted }]}>{title}</Text>
-      <Text style={[styles.cardValue, { color: colors.text }]}>{value}</Text>
-      {subtitle && <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+      <Text style={[styles.cardTitle, { color: colors.black2 }]}>{title}</Text>
+      <Text style={[styles.cardValue, { color: colors.black1 }]}>{value}</Text>
+      {subtitle && <Text style={[styles.cardSubtitle, { color: colors.black2 }]}>{subtitle}</Text>}
     </View>
   );
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Global Overview</Text>
-
+      <Text style={[styles.sectionTitle, { color: colors.black1 }]}>Global Overview</Text>
+ 
       {/* Users Section */}
-      <Text style={[styles.groupTitle, { color: colors.text }]}>Users</Text>
+      <Text style={[styles.groupTitle, { color: colors.black1 }]}>Users</Text>
       <View style={styles.grid}>
         {renderCard('Total Users', stats?.users?.total, 'Registered', '#0ea5e9')}
         {renderCard('New Today', stats?.users?.new_today, 'Last 24h', '#10b981')}
         {renderCard('Active (Month)', stats?.users?.active_this_month, 'Transacted', '#f59e0b')}
         {renderCard('Suspended', stats?.users?.suspended, 'Blocked', '#ef4444')}
       </View>
-
+ 
       {/* Transactions Section */}
-      <Text style={[styles.groupTitle, { color: colors.text }]}>Transactions</Text>
+      <Text style={[styles.groupTitle, { color: colors.black1 }]}>Transactions</Text>
       <View style={styles.grid}>
         {renderCard('Total Tx', stats?.transactions?.total, 'All time', '#6366f1')}
         {renderCard('Pending', stats?.transactions?.pending, 'In progress', '#f59e0b')}
         {renderCard('Completed', stats?.transactions?.completed, 'Finished', '#10b981')}
         {renderCard('Disputed', stats?.transactions?.disputed, 'Requires action', '#ef4444')}
       </View>
-
+ 
       {/* Commissions Section */}
-      <Text style={[styles.groupTitle, { color: colors.text }]}>Commissions & Revenue</Text>
+      <Text style={[styles.groupTitle, { color: colors.black1 }]}>Commissions & Revenue</Text>
       <View style={styles.grid}>
-        {renderCard('Total Revenue', \`\${stats?.commissions?.total?.toLocaleString()} XAF\`, 'All time', '#14b8a6')}
-        {renderCard('Today', \`\${stats?.commissions?.today?.toLocaleString()} XAF\`, 'Last 24h', '#14b8a6')}
-        {renderCard('This Month', \`\${stats?.commissions?.month?.toLocaleString()} XAF\`, 'Last 30 days', '#14b8a6')}
+        {renderCard('Total Revenue', `${stats?.commissions?.total?.toLocaleString()} XAF`, 'All time', '#14b8a6')}
+        {renderCard('Today', `${stats?.commissions?.today?.toLocaleString()} XAF`, 'Last 24h', '#14b8a6')}
+        {renderCard('This Month', `${stats?.commissions?.month?.toLocaleString()} XAF`, 'Last 30 days', '#14b8a6')}
       </View>
-
+ 
     </ScrollView>
   );
 }

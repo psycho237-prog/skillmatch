@@ -27,13 +27,13 @@ export default function AdminUsers() {
   const handleStatusChange = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     Alert.prompt(
-      \`Change status to \${newStatus}\`,
+      `Change status to ${newStatus}`,
       'Please provide a reason:',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: async (reason) => {
+          onPress: async (reason?: string) => {
             if (!reason) return Alert.alert('Error', 'Reason is required');
             try {
               await api.setAdminUserStatus(userId, newStatus, reason);
@@ -50,11 +50,11 @@ export default function AdminUsers() {
   const renderUser = ({ item }: { item: any }) => (
     <View style={[styles.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
       <View style={styles.colName}>
-        <Text style={[styles.name, { color: colors.text }]}>{item.display_name}</Text>
-        <Text style={[styles.phone, { color: colors.textMuted }]}>{item.phone_number}</Text>
+        <Text style={[styles.name, { color: colors.black1 }]}>{item.display_name}</Text>
+        <Text style={[styles.phone, { color: colors.black2 }]}>{item.phone_number}</Text>
       </View>
       <View style={styles.colBal}>
-        <Text style={{ color: colors.text, fontFamily: 'Rubik-Medium' }}>
+        <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>
           {Number(item.balance || 0).toLocaleString()} XAF
         </Text>
         <Text style={{ color: colors.warning, fontSize: 12 }}>
@@ -84,10 +84,10 @@ export default function AdminUsers() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header Row */}
       <View style={[styles.headerRow, { backgroundColor: colors.border }]}>
-        <Text style={[styles.colName, styles.headerText, { color: colors.text }]}>User</Text>
-        <Text style={[styles.colBal, styles.headerText, { color: colors.text }]}>Wallet</Text>
-        <Text style={[styles.colStatus, styles.headerText, { color: colors.text }]}>Status</Text>
-        <Text style={[styles.colActions, styles.headerText, { color: colors.text }]}>Actions</Text>
+        <Text style={[styles.colName, styles.headerText, { color: colors.black1 }]}>User</Text>
+        <Text style={[styles.colBal, styles.headerText, { color: colors.black1 }]}>Wallet</Text>
+        <Text style={[styles.colStatus, styles.headerText, { color: colors.black1 }]}>Status</Text>
+        <Text style={[styles.colActions, styles.headerText, { color: colors.black1 }]}>Actions</Text>
       </View>
 
       {loading ? (

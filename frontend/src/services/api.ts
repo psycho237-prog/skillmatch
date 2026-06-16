@@ -4,11 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = ENV.API_URL;
 
+const PLACEHOLDER = 'https://via.placeholder.com/400x300?text=No+Image';
+
 export const resolveImageUrl = (url: string | null | undefined): string => {
-  if (!url) return 'https://via.placeholder.com/150';
+  if (!url) return PLACEHOLDER;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/uploads')) return `${ENV.SOCKET_URL}${url}`;
-  return url; // fallback for local paths or others
+  if (url.startsWith('/uploads/')) return `${ENV.SOCKET_URL}${url}`;
+  // Local filesystem paths (e.g. /home/..., /media/...) can't be served — use placeholder
+  if (url.startsWith('/') || url.startsWith('file://') || url.startsWith('content://')) return PLACEHOLDER;
+  return PLACEHOLDER;
 };
 
 class ApiService {
@@ -136,18 +140,39 @@ class ApiService {
     const token = await this.getToken();
 
     const formData = new FormData();
-    
+
     // Process images
     await Promise.all(imageUris.map(async (uri, index) => {
-      const filename = uri.split('/').pop() || `image_${index}.jpg`;
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
-
       if (Platform.OS === 'web') {
+        // Web: fetch blob
         const response = await fetch(uri);
         const blob = await response.blob();
+        let filename = uri.split('/').pop() || `image_${index}.jpg`;
         formData.append('images', blob, filename);
       } else {
+        // Native (Android/iOS): build file object
+        // Extract filename from URI — strip query strings and fragments
+        let rawName = uri.split('/').pop()?.split('?')[0]?.split('#')[0] || `image_${index}.jpg`;
+        const match = /\.([a-zA-Z0-9]+)$/.exec(rawName);
+        let ext = match ? match[1].toLowerCase() : 'jpg';
+
+        // Normalize extensions to what multer/server accepts
+        if (ext === 'heic' || ext === 'heif') ext = 'jpg';  // HEIC → JPEG
+        if (ext === 'jpg') ext = 'jpg';
+
+        // Build clean filename
+        const filename = `image_${Date.now()}_${index}.${ext}`;
+
+        // Map extension to MIME
+        const mimeMap: Record<string, string> = {
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          webp: 'image/webp',
+          gif: 'image/gif',
+        };
+        const type = mimeMap[ext] || 'image/jpeg';
+
         formData.append('images', {
           uri,
           name: filename,
@@ -161,14 +186,21 @@ class ApiService {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          // DO NOT set Content-Type — let fetch set multipart/form-data boundary automatically
         },
         body: formData,
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned non-JSON: ${text.slice(0, 100)}`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Upload failed');
+        throw new Error(data.error || `Upload failed (${response.status})`);
       }
 
       return data;

@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     height: 300,
     resizeMode:'cover',
     marginTop: 0,
-    marginBottom: 15,
+    marginBottom: 25,
   },
   scroll: { 
     flexGrow: 1, 
@@ -214,10 +214,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: { marginBottom: 10 },
-  desc: { marginBottom: 10 },
+  desc: { marginBottom: 15 },
   formContainer: {
     paddingHorizontal: 24,
-    paddingVertical:1,
+    paddingVertical:10,
     width: '100%',
   },
   inputGroup: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     height: 45,
     borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 14,
     paddingHorizontal: 16,
     justifyContent: 'center',
   },

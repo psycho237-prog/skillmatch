@@ -175,6 +175,10 @@ router.post('/accept', authenticateToken, async (req, res) => {
     const initiator = initiatorRes.rows[0];
     const counterparty = counterpartyRes.rows[0];
 
+    // Detect correspondents
+    const initiatorDetector = initiator.correspondent ? { currency: initiator.currency, correspondent: initiator.correspondent } : await pawapay.detectCorrespondent(initiator.phone_number);
+    const counterpartyDetector = counterparty.correspondent ? { currency: counterparty.currency, correspondent: counterparty.correspondent } : await pawapay.detectCorrespondent(counterparty.phone_number);
+
     // Generate deposit IDs
     let depositIdInitiator = null;
     let depositIdCounterparty = null;
@@ -183,35 +187,37 @@ router.post('/accept', authenticateToken, async (req, res) => {
       const { clientId } = getEscrowParties(escrow, service);
       if (escrow.initiator_id === clientId) {
         depositIdInitiator = crypto.randomUUID();
+        const payerCurrency = initiatorDetector.currency || escrow.currency || 'XAF';
         // Record pending transaction
         await query(
           `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
            VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-          [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, escrow.currency, escrow.id]
+          [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, payerCurrency, escrow.id]
         );
         // Fire PawaPay Deposit
         await pawapay.initiateDeposit(
           depositIdInitiator,
           initiator.phone_number,
           escrow.amount_initiator,
-          escrow.currency,
-          initiator.correspondent
+          payerCurrency,
+          initiatorDetector.correspondent
         );
       } else {
         depositIdCounterparty = crypto.randomUUID();
+        const payerCurrency = counterpartyDetector.currency || escrow.currency || 'XAF';
         // Record pending transaction
         await query(
           `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
            VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-          [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, escrow.currency, escrow.id]
+          [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, payerCurrency, escrow.id]
         );
         // Fire PawaPay Deposit
         await pawapay.initiateDeposit(
           depositIdCounterparty,
           counterparty.phone_number,
           escrow.amount_counterparty,
-          escrow.currency,
-          counterparty.correspondent
+          payerCurrency,
+          counterpartyDetector.correspondent
         );
       }
     } else {
@@ -219,32 +225,35 @@ router.post('/accept', authenticateToken, async (req, res) => {
       depositIdInitiator = crypto.randomUUID();
       depositIdCounterparty = crypto.randomUUID();
 
+      const initCurrency = initiatorDetector.currency || escrow.currency || 'XAF';
+      const countCurrency = counterpartyDetector.currency || escrow.currency || 'XAF';
+
       // Initiate Initiator deposit
       await query(
         `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
          VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-        [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, escrow.currency, escrow.id]
+        [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, initCurrency, escrow.id]
       );
       await pawapay.initiateDeposit(
         depositIdInitiator,
         initiator.phone_number,
         escrow.amount_initiator,
-        escrow.currency,
-        initiator.correspondent
+        initCurrency,
+        initiatorDetector.correspondent
       );
 
       // Initiate Counterparty deposit
       await query(
         `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
          VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-        [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, escrow.currency, escrow.id]
+        [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, countCurrency, escrow.id]
       );
       await pawapay.initiateDeposit(
         depositIdCounterparty,
         counterparty.phone_number,
         escrow.amount_counterparty,
-        escrow.currency,
-        counterparty.correspondent
+        countCurrency,
+        counterpartyDetector.correspondent
       );
     }
 
@@ -378,19 +387,23 @@ async function processEscrowPayout(escrow, service) {
     const feeAmount = totalAmount * 0.05;
     const payoutAmount = totalAmount - feeAmount;
 
+    const providerDetector = await pawapay.detectCorrespondent(provider.phone_number);
+    const providerCurrency = provider.currency || providerDetector.currency || 'XAF';
+    const providerCorrespondent = provider.correspondent || providerDetector.respondent || providerDetector.correspondent || 'MTN_MOMO_CMR';
+
     // Payout to provider
     const payoutId = crypto.randomUUID();
     await query(
       `INSERT INTO escrow_transactions (id, user_id, type, pawapay_payout_id, amount, currency, status, escrow_id, created_at)
        VALUES ($1, $2, 'PAYOUT', $3, $4, $5, 'PENDING', $6, NOW())`,
-      [crypto.randomUUID(), providerId, payoutId, payoutAmount, escrow.currency, escrow.id]
+      [crypto.randomUUID(), providerId, payoutId, payoutAmount, providerCurrency, escrow.id]
     );
 
     // Record fee transaction
     await query(
       `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
        VALUES ($1, $2, 'FEE', $3, $4, 'COMPLETED', $5, NOW())`,
-      [crypto.randomUUID(), providerId, feeAmount, escrow.currency, escrow.id]
+      [crypto.randomUUID(), providerId, feeAmount, providerCurrency, escrow.id]
     );
 
     // Call PawaPay Payout
@@ -398,8 +411,8 @@ async function processEscrowPayout(escrow, service) {
       payoutId,
       provider.phone_number,
       payoutAmount,
-      escrow.currency,
-      provider.correspondent
+      providerCurrency,
+      providerCorrespondent
     );
 
     // Mirror to provider's in-platform wallet (credit)

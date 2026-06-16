@@ -71,6 +71,7 @@ export const translations = {
     rate_prompt: 'How many stars would you give this service?',
     rating_success: 'Rating dynamically saved and applied!',
     rating_error: 'Failed to submit rating.',
+    submit: 'Submit',
     detail: 'Detail',
 
     // Chat
@@ -214,6 +215,7 @@ export const translations = {
     rate_prompt: 'Combien d\'étoiles donneriez-vous à ce service ?',
     rating_success: 'Note enregistrée et appliquée !',
     rating_error: 'Échec de la soumission de la note.',
+    submit: 'Soumettre',
     detail: 'Détail',
 
     // Chat
@@ -357,6 +359,7 @@ export const translations = {
     rate_prompt: 'Wie viele Sterne würden Sie diesem Service geben?',
     rating_success: 'Bewertung gespeichert und angewendet!',
     rating_error: 'Bewertung konnte nicht eingereicht werden.',
+    submit: 'Absenden',
     detail: 'Detail',
 
     // Chat
@@ -500,6 +503,7 @@ export const translations = {
     rate_prompt: '您会给这项服务多少颗星？',
     rating_success: '评分已保存并应用！',
     rating_error: '提交评分失败。',
+    submit: '提交',
     detail: '详情',
 
     // Chat
@@ -643,6 +647,7 @@ export const translations = {
     rate_prompt: '¿Cuántas estrellas le darías a este servicio?',
     rating_success: '¡Calificación guardada y aplicada!',
     rating_error: 'Error al enviar la calificación.',
+    submit: 'Enviar',
     detail: 'Detalle',
 
     // Chat
@@ -786,6 +791,7 @@ export const translations = {
     rate_prompt: 'Сколько звёзд вы бы дали этому сервису?',
     rating_success: 'Оценка сохранена и применена!',
     rating_error: 'Не удалось отправить оценку.',
+    submit: 'Отправить',
     detail: 'Подробности',
 
     // Chat

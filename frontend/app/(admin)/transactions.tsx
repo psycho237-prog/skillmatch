@@ -29,14 +29,14 @@ export default function AdminTransactions() {
     return (
       <View style={[styles.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={styles.colUsers}>
-          <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.provider_name} ↔ {item.beneficiary_name}</Text>
+          <Text style={[styles.title, { color: colors.black1 }]}>{item.title}</Text>
+          <Text style={{ color: colors.black2, fontSize: 12 }}>{item.provider_name} ↔ {item.beneficiary_name}</Text>
         </View>
         <View style={styles.colType}>
           <Text style={{ color: colors.primary, fontSize: 12, fontFamily: 'Rubik-Medium' }}>
             {isS4S ? 'S4S' : 'C4S'}
           </Text>
-          <Text style={{ color: colors.text, fontFamily: 'Rubik-SemiBold' }}>
+          <Text style={{ color: colors.black1, fontFamily: 'Rubik-SemiBold' }}>
             {Number(item.amount).toLocaleString()} XAF
           </Text>
         </View>
@@ -57,9 +57,9 @@ export default function AdminTransactions() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.headerRow, { backgroundColor: colors.border }]}>
-        <Text style={[styles.colUsers, styles.headerText, { color: colors.text }]}>Service & Users</Text>
-        <Text style={[styles.colType, styles.headerText, { color: colors.text }]}>Value / Type</Text>
-        <Text style={[styles.colStatus, styles.headerText, { color: colors.text }]}>Status</Text>
+        <Text style={[styles.colUsers, styles.headerText, { color: colors.black1 }]}>Service & Users</Text>
+        <Text style={[styles.colType, styles.headerText, { color: colors.black1 }]}>Value / Type</Text>
+        <Text style={[styles.colStatus, styles.headerText, { color: colors.black1 }]}>Status</Text>
       </View>
 
       {loading ? (

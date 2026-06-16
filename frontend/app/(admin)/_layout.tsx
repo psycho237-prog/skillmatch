@@ -12,7 +12,7 @@ export default function AdminLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.text,
+        headerTintColor: colors.black1,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.black3,
         tabBarStyle: {
@@ -28,7 +28,7 @@ export default function AdminLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => (
-            <Image source={icons.barChart} style={[styles.icon, { tintColor: color }]} />
+            <Image source={icons.home} style={[styles.icon, { tintColor: color }]} />
           ),
         }}
       />

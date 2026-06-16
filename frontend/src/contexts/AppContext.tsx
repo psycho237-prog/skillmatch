@@ -14,6 +14,7 @@ interface User {
   notification_enabled: boolean;
   language: string;
   theme: string;
+  role?: string;
 }
 
 interface AppContextType {

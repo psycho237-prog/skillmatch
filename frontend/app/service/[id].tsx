@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, useWindowDimensions, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Animated, useWindowDimensions, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
@@ -16,6 +16,10 @@ export default function ServiceDetail() {
   const [service, setService] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const modalAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     fetchService();
@@ -104,44 +108,56 @@ export default function ServiceDetail() {
   };
 
   const submitRating = async (ratingVal: number) => {
-    if (!user || !service) return;
+    if (!user || !service || ratingVal === 0) return;
     try {
-      setLoading(true);
+      setSubmittingRating(true);
       await api.rateService(service.id, user.id, ratingVal);
       await fetchService();
+      closeRatingModal();
       showAlert(t('success'), t('rating_success'));
     } catch (e) {
       console.error(e);
       showAlert(t('error'), t('rating_error'));
     } finally {
-      setLoading(false);
+      setSubmittingRating(false);
     }
   };
 
-  const showRatePrompt = () => {
+  const openRatingModal = () => {
     if (!user) {
       showAlert(t('error'), t('login_required'));
       return;
     }
+    setSelectedRating(0);
+    setRatingModalVisible(true);
+    Animated.spring(modalAnim, {
+      toValue: 1,
+      friction: 7,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeRatingModal = () => {
+    Animated.timing(modalAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setRatingModalVisible(false);
+      setSelectedRating(0);
+    });
+  };
+
+  const showRatePrompt = () => {
     if (Platform.OS === 'web') {
-      const val = window.prompt(t('rate_prompt') + " (1-5)", "5");
+      const val = window.prompt(t('rate_prompt') + ' (1-5)', '5');
       if (val && parseInt(val) >= 1 && parseInt(val) <= 5) {
         submitRating(parseInt(val));
       }
       return;
     }
-    Alert.alert(
-      t('rate_service'),
-      t('rate_prompt'),
-      [
-        { text: '5★', onPress: () => submitRating(5) },
-        { text: '4★', onPress: () => submitRating(4) },
-        { text: '3★', onPress: () => submitRating(3) },
-        { text: '2★', onPress: () => submitRating(2) },
-        { text: '1★', style: 'destructive', onPress: () => submitRating(1) },
-        { text: t('cancel') }
-      ]
-    );
+    openRatingModal();
   };
 
   if (loading || !service) {
@@ -279,6 +295,102 @@ export default function ServiceDetail() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Rating Modal */}
+      <Modal
+        visible={ratingModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeRatingModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeRatingModal}
+        >
+          <Animated.View
+            style={[
+              styles.ratingModal,
+              { backgroundColor: colors.card || colors.background },
+              {
+                opacity: modalAnim,
+                transform: [{
+                  translateY: modalAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [80, 0],
+                  }),
+                }],
+              },
+            ]}
+          >
+            <TouchableOpacity activeOpacity={1}>
+              <Typography variant="h4" style={{ textAlign: 'center', marginBottom: 6 }}>
+                {t('rate_service')}
+              </Typography>
+              <Typography variant="body2" color={colors.black3} style={{ textAlign: 'center', marginBottom: 24 }}>
+                {t('rate_prompt')}
+              </Typography>
+
+              {/* Star selector */}
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setSelectedRating(star)}
+                    style={styles.starBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Typography
+                      variant="h1"
+                      style={[
+                        styles.starText,
+                        { color: star <= selectedRating ? '#FFB800' : colors.border },
+                      ]}
+                    >
+                      ★
+                    </Typography>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {selectedRating > 0 && (
+                <Typography
+                  variant="body2"
+                  style={{ textAlign: 'center', color: '#FFB800', marginBottom: 8 }}
+                >
+                  {['', '⭐ Poor', '⭐⭐ Fair', '⭐⭐⭐ Good', '⭐⭐⭐⭐ Great', '⭐⭐⭐⭐⭐ Excellent'][selectedRating]}
+                </Typography>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: colors.border + '40' }]}
+                  onPress={closeRatingModal}
+                >
+                  <Typography variant="body1" weight="medium" color={colors.black2}>
+                    {t('cancel')}
+                  </Typography>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtn,
+                    {
+                      backgroundColor: selectedRating > 0 ? colors.primary : colors.border,
+                      opacity: submittingRating ? 0.6 : 1,
+                    },
+                  ]}
+                  onPress={() => submitRating(selectedRating)}
+                  disabled={selectedRating === 0 || submittingRating}
+                >
+                  <Typography variant="body1" weight="bold" color="white">
+                    {submittingRating ? '...' : t('submit') || 'Submit'}
+                  </Typography>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Bottom Action Bar */}
       <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
@@ -486,5 +598,45 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     marginRight: 4,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  ratingModal: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 28,
+    paddingBottom: 44,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  starBtn: {
+    padding: 4,
+  },
+  starText: {
+    fontSize: 44,
+    lineHeight: 52,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
 });

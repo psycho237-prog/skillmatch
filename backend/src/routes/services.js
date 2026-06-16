@@ -173,11 +173,17 @@ router.post('/', async (req, res) => {
       user_id, title, description, category, price, price_type,
       currency, barter_skill,
       location, latitude, longitude, images, tags,
-      service_type, holdup_amount
+      service_type, holdup_amount, country
     } = req.body;
 
     if (!user_id || !title || !description || !category) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Verify user exists to prevent foreign key violation
+    const userCheck = await query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userCheck.rowCount === 0) {
+      return res.status(404).json({ error: 'User session not found in database. Please log out and log in again.' });
     }
 
     const effectivePriceType = price_type || 'negotiable';
@@ -189,9 +195,9 @@ router.post('/', async (req, res) => {
         user_id, title, description, category, price, price_type,
         currency, barter_skill,
         location, latitude, longitude, images, tags,
-        rating, review_count, featured, is_active, service_type, holdup_amount, created_at, updated_at
+        rating, review_count, featured, is_active, service_type, holdup_amount, country, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, $14, true, $15, $16, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, $14, true, $15, $16, $17, NOW(), NOW()
       ) RETURNING *
     `;
 
@@ -205,7 +211,8 @@ router.post('/', async (req, res) => {
       images || '{}', tags || '{}',
       featuredScore,
       service_type || 'SKILL_TO_CASH',
-      holdup_amount ? parseFloat(holdup_amount) : 0.00
+      holdup_amount ? parseFloat(holdup_amount) : 0.00,
+      country || 'CMR'
     ];
 
     const { rows } = await query(insertSql, params);
@@ -250,9 +257,69 @@ router.post('/:id/reviews', async (req, res) => {
 });
 
 // PUT /api/services/:id - Update a service
-router.put('/:id', async (req, res) => {
-  // Simplified for brevity, in a real app would build dynamic SET clause
-  res.status(501).json({ error: 'Not implemented in this refactor version' });
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    const userId = req.user.id;
+
+    // Check service existence and owner
+    const serviceRes = await query('SELECT * FROM services WHERE id = $1 AND deleted_at IS NULL', [serviceId]);
+    if (serviceRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    const service = serviceRes.rows[0];
+
+    if (service.user_id !== userId) {
+      return res.status(403).json({ error: 'Only the service owner can edit this service' });
+    }
+
+    const {
+      title, description, category, price, price_type,
+      currency, barter_skill, location, images,
+      service_type, holdup_amount, country
+    } = req.body;
+
+    const sql = `
+      UPDATE services 
+      SET title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          category = COALESCE($3, category),
+          price = COALESCE($4, price),
+          price_type = COALESCE($5, price_type),
+          currency = COALESCE($6, currency),
+          barter_skill = $7,
+          location = COALESCE($8, location),
+          images = COALESCE($9, images),
+          service_type = COALESCE($10, service_type),
+          holdup_amount = COALESCE($11, holdup_amount),
+          country = COALESCE($12, country),
+          updated_at = NOW()
+      WHERE id = $13
+      RETURNING *
+    `;
+
+    const params = [
+      title || null,
+      description || null,
+      category || null,
+      price !== undefined ? parseFloat(price) : null,
+      price_type || null,
+      currency || null,
+      barter_skill !== undefined ? barter_skill : null,
+      location || null,
+      images || null,
+      service_type || null,
+      holdup_amount !== undefined ? (holdup_amount ? parseFloat(holdup_amount) : 0.00) : null,
+      country || null,
+      serviceId
+    ];
+
+    const updateRes = await query(sql, params);
+    res.json({ service: updateRes.rows[0], message: 'Service updated successfully' });
+  } catch (error) {
+    console.error('Update service error:', error);
+    res.status(500).json({ error: 'Failed to update service' });
+  }
 });
 
 // DELETE /api/services/:id - Delete a service (Soft Delete with escrow verification)

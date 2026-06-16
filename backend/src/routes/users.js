@@ -117,7 +117,7 @@ router.get('/:id/readiness', authenticateToken, async (req, res) => {
     const serviceCount = serviceCountRes.rows[0].count;
 
     const invalidHoldRes = await query(
-      'SELECT COUNT(*)::int as count FROM services WHERE user_id = $1 AND (holdup_amount IS NULL OR holdup_amount <= 0) AND deleted_at IS NULL',
+      "SELECT COUNT(*)::int as count FROM services WHERE user_id = $1 AND service_type = 'SKILL_TO_SKILL' AND (holdup_amount IS NULL OR holdup_amount <= 0) AND deleted_at IS NULL",
       [userId]
     );
     const invalidHoldCount = invalidHoldRes.rows[0].count;

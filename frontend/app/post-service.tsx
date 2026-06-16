@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, Image, FlatList, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useApp } from '../src/contexts/AppContext';
 import { Typography } from '../src/components/Typography';
@@ -10,19 +10,22 @@ import { api } from '../src/services/api';
 import { icons } from '../src/constants';
 
 const CATEGORIES = ['Development', 'Design', 'Repair', 'Cleaning', 'Photography', 'Music', 'Other'];
-const CURRENCIES = [
-  { label: 'USD ($)', value: 'USD' },
-  { label: 'EUR (€)', value: 'EUR' },
-  { label: 'XAF (FCFA)', value: 'XAF' },
-  { label: 'GBP (£)', value: 'GBP' },
-  { label: 'CNY (¥)', value: 'CNY' },
-  { label: 'RUB (₽)', value: 'RUB' },
-];
 
-const PRICE_TYPES: ('fixed' | 'hourly' | 'exchange')[] = ['fixed', 'hourly', 'exchange'];
+const PAWAPAY_COUNTRIES = [
+  { name: 'Cameroon (XAF)', code: 'CMR', currency: 'XAF' },
+  { name: 'Ivory Coast (XOF)', code: 'CIV', currency: 'XOF' },
+  { name: 'Senegal (XOF)', code: 'SEN', currency: 'XOF' },
+  { name: 'Ghana (GHS)', code: 'GHA', currency: 'GHS' },
+  { name: 'Kenya (KES)', code: 'KEN', currency: 'KES' },
+  { name: 'Uganda (UGX)', code: 'UGA', currency: 'UGX' },
+  { name: 'Zambia (ZMW)', code: 'ZMB', currency: 'ZMW' },
+  { name: 'Rwanda (RWF)', code: 'RWA', currency: 'RWF' },
+];
 
 export default function PostService() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const isEditMode = !!id;
   const { colors, user, t, theme } = useApp();
   
   const [loading, setLoading] = useState(false);
@@ -32,11 +35,53 @@ export default function PostService() {
   const [category, setCategory] = useState('Development');
   const [location, setLocation] = useState('');
   const [priceType, setPriceType] = useState<'fixed' | 'hourly' | 'exchange'>('fixed');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('XAF');
+  const [selectedCountry, setSelectedCountry] = useState('CMR');
   const [barterSkill, setBarterSkill] = useState('');
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [serviceType, setServiceType] = useState<'SKILL_TO_CASH' | 'SKILL_TO_SKILL'>('SKILL_TO_CASH');
   const [holdupAmount, setHoldupAmount] = useState('');
+
+  useEffect(() => {
+    if (isEditMode && id) {
+      fetchServiceDetails();
+    }
+  }, [id]);
+
+  const fetchServiceDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await api.getServiceById(id as string);
+      const s = res.service;
+      if (s) {
+        setTitle(s.title || '');
+        setDescription(s.description || '');
+        setPrice(String(s.price || ''));
+        setCategory(s.category || 'Development');
+        setLocation(s.location || '');
+        setPriceType(s.price_type || 'fixed');
+        setCurrency(s.currency || 'XAF');
+        setBarterSkill(s.barter_skill || '');
+        setImageUris(s.images || []);
+        setServiceType(s.service_type || 'SKILL_TO_CASH');
+        setHoldupAmount(s.holdup_amount ? String(s.holdup_amount) : '');
+        setSelectedCountry(s.country || 'CMR');
+      }
+    } catch (e) {
+      console.error('Failed to load service detail:', e);
+      Alert.alert('Error', 'Failed to load service details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCountryChange = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    const countryObj = PAWAPAY_COUNTRIES.find(c => c.code === countryCode);
+    if (countryObj) {
+      setCurrency(countryObj.currency);
+    }
+  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -78,8 +123,8 @@ export default function PostService() {
       return;
     }
 
-    const parsedHold = parseFloat(holdupAmount);
-    if (isNaN(parsedHold) || parsedHold <= 0) {
+    const parsedHold = serviceType === 'SKILL_TO_CASH' ? 0.00 : parseFloat(holdupAmount);
+    if (serviceType === 'SKILL_TO_SKILL' && (isNaN(parsedHold) || parsedHold <= 0)) {
       showAlert(t('error'), 'Holdup amount must be a number greater than 0.');
       return;
     }
@@ -88,14 +133,19 @@ export default function PostService() {
       setLoading(true);
       
       let uploadedUrls: string[] = [];
-      if (imageUris.length > 0) {
-        const uploadRes = await api.uploadImages(imageUris);
-        uploadedUrls = uploadRes.urls;
+      const localImages = imageUris.filter(uri => uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://') || uri.startsWith('data:'));
+      const existingImages = imageUris.filter(uri => uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('/uploads'));
+
+      if (localImages.length > 0) {
+        const uploadRes = await api.uploadImages(localImages);
+        uploadedUrls = [...existingImages, ...uploadRes.urls];
+      } else if (existingImages.length > 0) {
+        uploadedUrls = existingImages;
       } else {
         uploadedUrls = ['https://images.unsplash.com/photo-1517245386807-bb43f82c33c4']; // Default
       }
 
-      await api.createService({
+      const serviceData = {
         user_id: user?.id,
         title,
         description,
@@ -107,14 +157,23 @@ export default function PostService() {
         location,
         images: uploadedUrls,
         service_type: serviceType,
-        holdup_amount: parsedHold
-      });
-      
-      showAlert(t('success'), t('post_success'), [
-        { text: t('ok'), onPress: () => router.back() }
-      ]);
+        holdup_amount: parsedHold,
+        country: selectedCountry
+      };
+
+      if (isEditMode && id) {
+        await api.updateService(id as string, serviceData);
+        showAlert(t('success'), 'Service updated successfully!', [
+          { text: t('ok'), onPress: () => router.back() }
+        ]);
+      } else {
+        await api.createService(serviceData);
+        showAlert(t('success'), t('post_success'), [
+          { text: t('ok'), onPress: () => router.back() }
+        ]);
+      }
     } catch (error: any) {
-      showAlert(t('error'), error.message || 'Failed to post service');
+      showAlert(t('error'), error.message || 'Failed to submit service');
     } finally {
       setLoading(false);
     }
@@ -127,7 +186,7 @@ export default function PostService() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Typography variant="body1" color={colors.primary}>{t('back')}</Typography>
         </TouchableOpacity>
-        <Typography variant="h4">{t('post_service')}</Typography>
+        <Typography variant="h4">{isEditMode ? 'Update Service' : t('post_service')}</Typography>
         <View style={styles.placeholder} />
       </View>
 
@@ -209,17 +268,37 @@ export default function PostService() {
             ))}
           </View>
 
-          <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>Holdup Amount (Commitment Hold)</Typography>
-          <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <TextInput
-              placeholder="e.g. 500"
-              placeholderTextColor={colors.black3}
-              keyboardType="numeric"
-              style={[styles.input, { color: colors.black1 }]}
-              value={holdupAmount}
-              onChangeText={setHoldupAmount}
-            />
-          </View>
+          {serviceType === 'SKILL_TO_SKILL' && (
+            <>
+              <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>Holdup Amount (Commitment Hold)</Typography>
+              <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TextInput
+                  placeholder="e.g. 500"
+                  placeholderTextColor={colors.black3}
+                  keyboardType="numeric"
+                  style={[styles.input, { color: colors.black1 }]}
+                  value={holdupAmount}
+                  onChangeText={setHoldupAmount}
+                />
+              </View>
+            </>
+          )}
+
+          <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>PawaPay Target Country</Typography>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+            {PAWAPAY_COUNTRIES.map(c => (
+              <TouchableOpacity
+                key={c.code}
+                style={[
+                  styles.categoryChip,
+                  { backgroundColor: selectedCountry === c.code ? colors.primary : colors.card, borderColor: colors.border }
+                ]}
+                onPress={() => handleCountryChange(c.code)}
+              >
+                <Typography variant="body2" color={selectedCountry === c.code ? 'white' : colors.black1}>{c.name}</Typography>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
           {priceType !== 'exchange' ? (
             <>
@@ -238,21 +317,10 @@ export default function PostService() {
                   </View>
                 </View>
                 <View style={{ width: 120 }}>
-                  <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>{t('currency_label')}</Typography>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyScroll}>
-                    {CURRENCIES.map(curr => (
-                      <TouchableOpacity
-                        key={curr.value}
-                        style={[
-                          styles.currencyChip,
-                          { backgroundColor: currency === curr.value ? colors.primary : colors.card, borderColor: colors.border }
-                        ]}
-                        onPress={() => setCurrency(curr.value)}
-                      >
-                        <Typography variant="caption" color={currency === curr.value ? 'white' : colors.black1}>{curr.value}</Typography>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>Currency (Locked)</Typography>
+                  <View style={[styles.inputGroup, { backgroundColor: colors.border + '30', borderColor: colors.border, justifyContent: 'center', paddingHorizontal: 16 }]}>
+                    <Typography variant="body2" color={colors.black1} weight="bold">{currency}</Typography>
+                  </View>
                 </View>
               </View>
             </>
@@ -283,7 +351,7 @@ export default function PostService() {
           </View>
 
           <Button
-            title={t('publish')}
+            title={isEditMode ? 'Update' : t('publish')}
             onPress={handleSubmit}
             loading={loading}
             fullWidth
@@ -365,7 +433,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  typeContainer: { flexDirection: 'row', flexWrap: 'wrap' },
+  typeContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
   typeChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,

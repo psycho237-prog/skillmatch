@@ -35,8 +35,8 @@ async function seed() {
 
   console.log('Seeding services...');
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images, service_type, holdup_amount, country) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       user1.id, 
       'Bitch Web Developer', 
@@ -49,13 +49,16 @@ async function seed() {
       1, 
       0, 
       0, 
-      ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png']
+      ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png'],
+      'SKILL_TO_CASH',
+      0.00,
+      'CMR'
     ]
   );
 
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images, service_type, holdup_amount, country) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       user2.id, 
       'Emergency Plumbing Repair', 
@@ -68,13 +71,16 @@ async function seed() {
       1, 
       0, 
       0, 
-      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
+      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34'],
+      'SKILL_TO_CASH',
+      0.00,
+      'CMR'
     ]
   );
 
   await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images, service_type, holdup_amount, country) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       user3.id, 
       'Logo & UI/UX Design', 
@@ -87,7 +93,10 @@ async function seed() {
       0, 
       0, 
       0, 
-      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
+      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34'],
+      'SKILL_TO_SKILL',
+      120.00,
+      'CMR'
     ]
   );
 

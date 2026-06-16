@@ -102,7 +102,7 @@ export default function Profile() {
   };
 
   const menuItems = [
-    { icon: icons.calendar, title: t('my_services'), action: () => {} },
+    { icon: icons.calendar, title: t('my_services'), action: () => router.push('/my-services') },
     { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
     { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
     { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
