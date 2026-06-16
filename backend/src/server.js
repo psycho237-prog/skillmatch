@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const { Server } = require('socket.io');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -42,6 +43,14 @@ app.use(express.urlencoded({ extended: true }));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Proxy admin panel requests to the Docker container running the admin panel
+app.use('/admin', createProxyMiddleware({ 
+  target: 'http://admin-panel:8080', 
+  changeOrigin: true,
+  pathRewrite: {
+    '^/admin': '', // remove /admin from the path before forwarding
+  },
+}));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -66,7 +75,6 @@ app.get('/api/health', (req, res) => {
 setupChatSocket(io);
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = process.env.PORT || 3000;
-
 // Run database migrations on startup
 runMigrations()
   .then(() => {
