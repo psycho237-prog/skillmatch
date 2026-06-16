@@ -1,13 +1,6 @@
-const { Pool } = require('pg');
+require('dotenv').config();
+const { pool } = require('./src/config/database');
 const bcrypt = require('bcryptjs');
-
-const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'skillmatch',
-  user: 'skillmatch_user',
-  password: 'skillmatch123',
-});
 
 async function seed() {
   const salt = await bcrypt.genSalt(10);
@@ -349,7 +342,4 @@ async function seed() {
   pool.end();
 }
 
-seed().catch(err => {
-  console.error('❌ Seed error:', err);
-  pool.end();
-});
+seed();

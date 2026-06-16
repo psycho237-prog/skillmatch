@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../src/contexts/AppContext';
 import { api } from '../../src/services/api';
 import { icons } from '../../src/constants';
+import { CountryPicker } from '../../src/components/CountryPicker';
 
 export default function WalletScreen() {
   const { colors, user } = useApp();
@@ -29,7 +30,8 @@ export default function WalletScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
-  const [phone, setPhone] = useState(user?.phone_number || '');
+  const [countryCode, setCountryCode] = useState('237');
+  const [phone, setPhone] = useState('');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -64,11 +66,12 @@ export default function WalletScreen() {
 
     try {
       setProcessing(true);
+      const fullPhone = countryCode + phone.replace(/^0+/, '');
       if (modalType === 'deposit') {
-        await api.depositFunds(Number(amount), phone);
+        await api.depositFunds(Number(amount), fullPhone);
         Alert.alert('Success', 'Deposit successful (Sandbox)');
       } else {
-        await api.withdrawFunds(Number(amount), phone);
+        await api.withdrawFunds(Number(amount), fullPhone);
         Alert.alert('Success', 'Withdrawal successful (Sandbox)');
       }
       
@@ -101,7 +104,7 @@ export default function WalletScreen() {
       <View style={[styles.historyItem, { borderBottomColor: colors.border }]}>
         <View style={styles.historyLeft}>
           <Text style={[styles.historyType, { color: colors.black1 }]}>{item.description}</Text>
-          <Text style={[styles.historyDate, { color: colors.black2 }]}>{dateStr}</Text>
+          <Text style={[styles.historyDate, { color: colors.black3 }]}>{dateStr}</Text>
         </View>
         <View style={styles.historyRight}>
           <Text style={[styles.historyAmount, { color: amountColor }]}>
@@ -173,7 +176,7 @@ export default function WalletScreen() {
       <View style={styles.historyContainer}>
         <Text style={[styles.sectionTitle, { color: colors.black1 }]}>Recent Transactions</Text>
         {history.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.black2 }]}>No transactions yet</Text>
+          <Text style={[styles.emptyText, { color: colors.black3 }]}>No transactions yet</Text>
         ) : (
           <FlatList
             data={history}
@@ -207,7 +210,7 @@ export default function WalletScreen() {
               <Text style={[styles.modalTitle, { color: colors.black1 }]}>
                 {modalType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
               </Text>
-              <Text style={[styles.modalSubtitle, { color: colors.black2 }]}>
+              <Text style={[styles.modalSubtitle, { color: colors.black3 }]}>
                 Via Mobile Money (Sandbox)
               </Text>
 
@@ -220,21 +223,22 @@ export default function WalletScreen() {
                     value={amount}
                     onChangeText={setAmount}
                     placeholder="0"
-                    placeholderTextColor={colors.black2}
+                    placeholderTextColor={colors.black3}
                   />
                 </View>
               </View>
    
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
-                <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
+                <View style={[styles.inputContainer, { flexDirection: 'row', alignItems: 'center', borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
+                  <CountryPicker selectedCode={countryCode} onSelectCode={setCountryCode} />
                   <TextInput
-                    style={[styles.input, { color: colors.black1 }]}
+                    style={[styles.input, { flex: 1, color: colors.black1 }]}
                     keyboardType="phone-pad"
                     value={phone}
                     onChangeText={setPhone}
-                    placeholder="+237..."
-                    placeholderTextColor={colors.black2}
+                    placeholder="69..."
+                    placeholderTextColor={colors.black3}
                   />
                 </View>
               </View>

@@ -8,6 +8,7 @@ import { Button } from '../../src/components/Button';
 import { api } from '../../src/services/api';
 import { images } from '../../src/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CountryPicker } from '../../src/components/CountryPicker';
 
 export default function Welcome() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function Welcome() {
   const onboardingImage = theme === 'dark' ? images.onboarding_dark : images.onboarding;
 
   // Form state
+  const [countryCode, setCountryCode] = useState('237');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -47,7 +49,8 @@ export default function Welcome() {
 
       try {
         setLoading(true);
-        const res = await api.loginWithPhone(phoneNumber, password);
+        const fullPhone = countryCode + phoneNumber.replace(/^0+/, ''); // strip leading zero
+        const res = await api.loginWithPhone(fullPhone, password);
         await setUser(res.user, res.token);
         router.replace('/(tabs)/home');
       } catch (error: any) {
@@ -64,8 +67,13 @@ export default function Welcome() {
 
         try {
           setLoading(true);
-          await api.sendOtp(phoneNumber);
-          showAlert('Verification Code Sent', 'A verification code has been sent to your number via WhatsApp.');
+          const fullPhone = countryCode + phoneNumber.replace(/^0+/, '');
+          const res = await api.sendOtp(fullPhone);
+          if (res.debug_otp) {
+            showAlert('Verification Code (Debug)', `Your code is: ${res.debug_otp}`);
+          } else {
+            showAlert('Verification Code Sent', 'A verification code has been sent to your number via WhatsApp.');
+          }
           setShowOtpInput(true);
         } catch (error: any) {
           showAlert('Verification Failed', error.message || 'Could not send verification code.');
@@ -80,7 +88,8 @@ export default function Welcome() {
 
         try {
           setLoading(true);
-          const res = await api.registerWithPhone(phoneNumber, password, displayName, otpCode);
+          const fullPhone = countryCode + phoneNumber.replace(/^0+/, '');
+          const res = await api.registerWithPhone(fullPhone, password, displayName, otpCode);
           await setUser(res.user, res.token);
           router.replace('/(tabs)/home');
         } catch (error: any) {
@@ -122,7 +131,8 @@ export default function Welcome() {
                 </View>
               )}
 
-              <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
+                <CountryPicker selectedCode={countryCode} onSelectCode={setCountryCode} />
                 <TextInput
                   placeholder="Phone Number"
                   placeholderTextColor={colors.black3}
@@ -147,7 +157,7 @@ export default function Welcome() {
           ) : (
             <>
               <Typography variant="body2" color={colors.black2} align="center" style={{ marginBottom: 15 }}>
-                Enter the 6-digit code sent to <Text style={{ fontWeight: 'bold', color: colors.primary }}>{phoneNumber}</Text> via WhatsApp.
+                Enter the 6-digit code sent to <Text style={{ fontWeight: 'bold', color: colors.primary }}>+{countryCode} {phoneNumber}</Text> via WhatsApp.
               </Typography>
               
               <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>

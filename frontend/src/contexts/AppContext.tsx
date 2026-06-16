@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [user, setUserState] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
-  const [themePreference, setThemePrefState] = useState<'system' | 'light' | 'dark'>('system');
+  const [themePreference, setThemePrefState] = useState<'system' | 'light' | 'dark'>('light');
   const [language, setLangState] = useState<Language>('en');
   const [notificationsEnabled, setNotifState] = useState(true);
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
@@ -237,7 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       await AsyncStorage.removeItem(STORAGE_KEYS.USER);
       await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
-      setThemePrefState('system');
+      setThemePrefState('light');
       await AsyncStorage.removeItem(STORAGE_KEYS.THEME);
     }
   };

@@ -95,11 +95,7 @@ router.post('/register', async (req, res) => {
       phone = '237' + phone;
     }
 
-    // Check if user exists
-    const existingUser = await query('SELECT id FROM users WHERE phone_number = $1', [phone]);
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'Phone number already registered' });
-    }
+    // Removed 'Phone number already registered' check to allow multiple verifications with same number
 
     // Verify OTP
     const q = await query(
@@ -152,10 +148,13 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // Insert user
+    // Insert or update user
     const newUser = await query(
       `INSERT INTO users (phone_number, password_hash, display_name, created_at, last_login) 
-       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme`,
+       VALUES ($1, $2, $3, NOW(), NOW()) 
+       ON CONFLICT (phone_number) DO UPDATE 
+       SET password_hash = EXCLUDED.password_hash, display_name = EXCLUDED.display_name, last_login = NOW()
+       RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme`,
       [phone, password_hash, display_name]
     );
 

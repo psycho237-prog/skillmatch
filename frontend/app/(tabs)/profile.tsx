@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { icons } from '../../src/constants';
+import { socketService } from '../../src/services/socket';
 
 export default function Profile() {
   const { colors, t, user, setUser, themePreference, setThemePreference, language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useApp();
@@ -31,36 +32,7 @@ export default function Profile() {
   };
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      const userId = user?.id;
-      if (!userId) {
-        alert(t('login_required'));
-        return;
-      }
-
-      try {
-        const uri = result.assets[0].uri;
-        const uploadRes = await api.uploadImages([uri]);
-        const serverUrl = uploadRes.urls[0];
-
-        // 1. Update on server
-        const updateRes = await api.updateUser(userId, { avatar_url: serverUrl });
-        
-        // 2. Update local state with fresh data from server
-        await setUser(updateRes.user, undefined);
-        
-      } catch (e: any) {
-        console.error('Failed to update avatar', e);
-        alert('Upload failed: ' + e.message);
-      }
-    }
+    router.push('/edit-profile');
   };
 
   const handleLogout = async () => {
@@ -104,14 +76,32 @@ export default function Profile() {
   const menuItems = [
     { icon: icons.calendar, title: t('my_services'), action: () => router.push('/my-services') },
     { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
+    { icon: icons.wallet, title: 'Payments', action: () => router.push('/(tabs)/wallet') },
     { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
     { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
-    { icon: icons.person, title: t('profile'), action: () => {} },
+    { icon: icons.person, title: t('profile'), action: () => router.push('/edit-profile') },
     { 
       icon: icons.bell, 
       title: t('notifications_setting'), 
-      rightElement: <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ true: colors.primary }} /> 
+      action: () => {
+        socketService.socket?.emit('new_message', {
+          conversation_id: 'test',
+          sender_id: 'system',
+          content: 'This is a test notification! It works perfectly.'
+        });
+        
+        socketService.socket?.io.engine.onPacket({
+          type: 2, 
+          nsp: '/', 
+          data: ['new_message', {
+            conversation_id: 'test',
+            sender_id: 'system',
+            content: 'Hello! This is a test notification from Swapster.'
+          }]
+        });
+      }
     },
+    { icon: icons.shield, title: t('security'), action: () => alert('Security Settings: Coming soon!') },
     { 
       icon: icons.language, 
       title: t('language'), 
@@ -124,7 +114,7 @@ export default function Profile() {
       action: () => setThemeModalVisible(true),
       rightText: getThemeText()
     },
-    { icon: icons.info, title: t('help_center'), action: handleHelp },
+    { icon: icons.info, title: t('help_center'), action: () => alert('Help Center: Coming soon!') },
     { icon: icons.people, title: t('invite_friends'), action: handleInvite },
   ];
 

@@ -134,6 +134,44 @@ class ApiService {
     });
   }
 
+  // Upload - Generic multi-file upload via FormData
+  async uploadFiles(files: { uri: string; name: string; mimeType: string }[]): Promise<{ urls: string[]; count: number }> {
+    const url = `${this.baseUrl}/upload`;
+    const token = await this.getToken();
+
+    const formData = new FormData();
+    
+    await Promise.all(files.map(async (file, index) => {
+      if (Platform.OS === 'web') {
+        const response = await fetch(file.uri);
+        const blob = await response.blob();
+        formData.append('images', blob, file.name);
+      } else {
+        formData.append('images', {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'application/octet-stream',
+        } as any);
+      }
+    }));
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Upload failed');
+      return data;
+    } catch (error: any) {
+      console.error('Upload Error:', error.message);
+      throw error;
+    }
+  }
+
   // Upload - Multi-image upload via FormData
   async uploadImages(imageUris: string[]): Promise<{ urls: string[]; count: number }> {
     const url = `${this.baseUrl}/upload`;
