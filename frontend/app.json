@@ -24,7 +24,8 @@
         "NSCameraUsageDescription": "Swapster needs camera access to take photos for your service listings.",
         "NSPhotoLibraryUsageDescription": "Swapster needs photo library access to upload images for your service listings.",
         "NSLocationWhenInUseUsageDescription": "Swapster needs your location to show nearby services.",
-        "NSLocationAlwaysUsageDescription": "Swapster uses your location to recommend nearby services."
+        "NSLocationAlwaysUsageDescription": "Swapster uses your location to recommend nearby services.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {
