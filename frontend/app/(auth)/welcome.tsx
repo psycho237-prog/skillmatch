@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, Text, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../../contexts/AppContext';
-import { Typography } from '../../../components/Typography';
-import { Button } from '../../../components/Button';
-import { api } from '../../../services/api';
-import { images } from '../../../constants';
+import { useApp } from '../../src/contexts/AppContext';
+import { Typography } from '../../src/components/Typography';
+import { Button } from '../../src/components/Button';
+import { api } from '../../src/services/api';
+import { images } from '../../src/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Welcome() {

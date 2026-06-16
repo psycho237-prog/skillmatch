@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '../../contexts/AppContext';
-import { Typography } from '../../components/Typography';
-import { Button } from '../../components/Button';
-import { api, resolveImageUrl } from '../../services/api';
+import { useApp } from '../src/contexts/AppContext';
+import { Typography } from '../src/components/Typography';
+import { Button } from '../src/components/Button';
+import { api, resolveImageUrl } from '../src/services/api';
 
 export default function MyServicesScreen() {
   const router = useRouter();
@@ -97,7 +97,7 @@ export default function MyServicesScreen() {
                   <Typography variant="body2" color={colors.black2} numberOfLines={2} style={styles.description}>
                     {item.description}
                   </Typography>
-
+                  
                   <View style={styles.priceRow}>
                     <Typography variant="h6" color={colors.primary} weight="bold">
                       {item.price_type === 'exchange' ? 'Barter' : `${item.price} ${item.currency}`}
@@ -114,14 +114,14 @@ export default function MyServicesScreen() {
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
               <View style={styles.actions}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={[styles.actionBtn, { borderColor: colors.border }]}
                   onPress={() => handleEdit(item.id)}
                 >
                   <Typography variant="body2" color={colors.primary} weight="medium">Update</Typography>
                 </TouchableOpacity>
 
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={[styles.actionBtn, styles.deleteBtn, { borderColor: colors.danger }]}
                   onPress={() => handleDelete(item.id, item.title)}
                 >

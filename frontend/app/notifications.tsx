@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '../../contexts/AppContext';
-import { Typography } from '../../components/Typography';
-import { icons } from '../../constants';
+import { useApp } from '../src/contexts/AppContext';
+import { Typography } from '../src/components/Typography';
+import { icons } from '../src/constants';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function NotificationsScreen() {
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
+      
       if (diffMins < 1) return 'Just now';
       if (diffMins < 60) return `${diffMins}m ago`;
       if (diffHours < 24) return `${diffHours}h ago`;
@@ -63,12 +63,12 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[
-              styles.card,
-              {
-                backgroundColor: item.read ? colors.card : colors.primary + '0a',
-                borderColor: item.read ? colors.border : colors.primary + '30'
+              styles.card, 
+              { 
+                backgroundColor: item.read ? colors.card : colors.primary + '0a', 
+                borderColor: item.read ? colors.border : colors.primary + '30' 
               }
             ]}
             onPress={() => markNotificationRead(item.id)}
@@ -83,13 +83,13 @@ export default function NotificationsScreen() {
               </View>
               <Typography variant="caption" color={colors.black3}>{formatTime(item.timestamp)}</Typography>
             </View>
-
+            
             <Typography variant="body2" color={colors.black2} style={styles.body}>
               {item.body}
             </Typography>
 
-            <TouchableOpacity
-              style={styles.deleteBtn}
+            <TouchableOpacity 
+              style={styles.deleteBtn} 
               onPress={() => removeNotification(item.id)}
             >
               <Typography variant="caption" color={colors.danger} weight="bold">Delete</Typography>

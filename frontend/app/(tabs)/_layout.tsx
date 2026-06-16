@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Image, StyleSheet, View } from 'react-native';
-import { useApp } from '../../../contexts/AppContext';
-import { icons } from '../../../constants';
+import { useApp } from '../../src/contexts/AppContext';
+import { icons } from '../../src/constants';
 
 export default function TabLayout() {
   const { colors, t } = useApp();

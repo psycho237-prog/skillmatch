@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useApp } from '../../../contexts/AppContext';
-import { Typography } from '../../../components/Typography';
-import { ServiceCard } from '../../../components/ServiceCard';
-import { icons } from '../../../constants';
-import { api } from '../../../services/api';
+import { useApp } from '../../src/contexts/AppContext';
+import { Typography } from '../../src/components/Typography';
+import { ServiceCard } from '../../src/components/ServiceCard';
+import { icons } from '../../src/constants';
+import { api } from '../../src/services/api';
 
 export default function Explore() {
   const { q } = useLocalSearchParams();
@@ -36,11 +36,11 @@ export default function Explore() {
     try {
       setLoading(true);
       if (!qToUse.trim()) {
-        const res = await api.getServices({ category: cToUse }, user?.id);
-        setResults(res.services || []);
+         const res = await api.getServices({ category: cToUse }, user?.id);
+         setResults(res.services || []);
       } else {
-        const res = await api.searchServices(qToUse, { category: cToUse }, user?.id);
-        setResults(res.services || []);
+         const res = await api.searchServices(qToUse, { category: cToUse }, user?.id);
+         setResults(res.services || []);
       }
     } catch (e) {
       console.error(e);
@@ -59,8 +59,8 @@ export default function Explore() {
     setResults(prev => prev.map(item => {
       if (item.id === serviceId) {
         const currentlyFavorited = !!item.is_favorited;
-        return {
-          ...item,
+        return { 
+          ...item, 
           is_favorited: !currentlyFavorited,
           likes_count: Number(item.likes_count || 0) + (currentlyFavorited ? -1 : 1)
         };
@@ -107,10 +107,10 @@ export default function Explore() {
       {showFilters && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
+            <TouchableOpacity 
+              key={cat} 
               style={[
-                styles.categoryPill,
+                styles.categoryPill, 
                 { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
               ]}
               onPress={() => {
@@ -147,7 +147,7 @@ export default function Explore() {
         ))}
         {results.length === 0 && !loading && (
           <View style={styles.empty}>
-            <Typography variant="body1" color={colors.black2}>{t('no_results_desc')}</Typography>
+             <Typography variant="body1" color={colors.black2}>{t('no_results_desc')}</Typography>
           </View>
         )}
       </ScrollView>

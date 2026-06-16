@@ -1,14 +1,14 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { AppProvider, useApp } from '../../contexts/AppContext';
-import { View, ActivityIndicator, Image, StyleSheet } from 'react-native';
-import { images } from '../../constants';
+import { AppProvider, useApp } from '../src/contexts/AppContext';
+import { View, ActivityIndicator, Image, StyleSheet} from 'react-native';
+import { images } from '../src/constants';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
-SplashScreen.preventAutoHideAsync().catch(() => { });
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootLayoutNav({ onLayoutReady }: { onLayoutReady: () => void }) {
   const { colors, theme, initialized } = useApp();
@@ -20,7 +20,7 @@ function RootLayoutNav({ onLayoutReady }: { onLayoutReady: () => void }) {
   }, [initialized, onLayoutReady]);
 
   if (!initialized) {
-    return null;
+     return null;
   }
 
   return (
@@ -51,7 +51,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded && appReady) {
-      SplashScreen.hideAsync().catch(() => { });
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, appReady]);
 

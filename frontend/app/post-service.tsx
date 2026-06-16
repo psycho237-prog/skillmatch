@@ -3,11 +3,11 @@ import { View, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, Image
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../contexts/AppContext';
-import { Typography } from '../../components/Typography';
-import { Button } from '../../components/Button';
-import { api } from '../../services/api';
-import { icons } from '../../constants';
+import { useApp } from '../src/contexts/AppContext';
+import { Typography } from '../src/components/Typography';
+import { Button } from '../src/components/Button';
+import { api } from '../src/services/api';
+import { icons } from '../src/constants';
 
 const CATEGORIES = ['Development', 'Design', 'Repair', 'Cleaning', 'Photography', 'Music', 'Other'];
 
@@ -27,7 +27,7 @@ export default function PostService() {
   const { id } = useLocalSearchParams();
   const isEditMode = !!id;
   const { colors, user, t, theme } = useApp();
-
+  
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -131,7 +131,7 @@ export default function PostService() {
 
     try {
       setLoading(true);
-
+      
       let uploadedUrls: string[] = [];
       const localImages = imageUris.filter(uri => uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://') || uri.startsWith('data:'));
       const existingImages = imageUris.filter(uri => uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('/uploads'));
@@ -193,7 +193,7 @@ export default function PostService() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
           <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>{t('service_image')}</Typography>
-
+          
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
             {imageUris.map((uri, index) => (
               <View key={index} style={styles.imageWrapper}>
@@ -224,10 +224,10 @@ export default function PostService() {
           <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>{t('category')}</Typography>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
             {CATEGORIES.map(cat => (
-              <TouchableOpacity
-                key={cat}
+              <TouchableOpacity 
+                key={cat} 
                 style={[
-                  styles.categoryChip,
+                  styles.categoryChip, 
                   { backgroundColor: cat === category ? colors.primary : colors.card, borderColor: colors.border }
                 ]}
                 onPress={() => setCategory(cat)}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
-import { useApp } from '../../../contexts/AppContext';
-import { api } from '../../../services/api';
+import { useApp } from '../../src/contexts/AppContext';
+import { api } from '../../src/services/api';
 
 export default function AdminDashboard() {
   const { colors } = useApp();
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.sectionTitle, { color: colors.black1 }]}>Global Overview</Text>
-
+ 
       {/* Users Section */}
       <Text style={[styles.groupTitle, { color: colors.black1 }]}>Users</Text>
       <View style={styles.grid}>
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
         {renderCard('Active (Month)', stats?.users?.active_this_month, 'Transacted', '#f59e0b')}
         {renderCard('Suspended', stats?.users?.suspended, 'Blocked', '#ef4444')}
       </View>
-
+ 
       {/* Transactions Section */}
       <Text style={[styles.groupTitle, { color: colors.black1 }]}>Transactions</Text>
       <View style={styles.grid}>
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
         {renderCard('Completed', stats?.transactions?.completed, 'Finished', '#10b981')}
         {renderCard('Disputed', stats?.transactions?.disputed, 'Requires action', '#ef4444')}
       </View>
-
+ 
       {/* Commissions Section */}
       <Text style={[styles.groupTitle, { color: colors.black1 }]}>Commissions & Revenue</Text>
       <View style={styles.grid}>
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
         {renderCard('Today', `${stats?.commissions?.today?.toLocaleString()} XAF`, 'Last 24h', '#14b8a6')}
         {renderCard('This Month', `${stats?.commissions?.month?.toLocaleString()} XAF`, 'Last 30 days', '#14b8a6')}
       </View>
-
+ 
     </ScrollView>
   );
 }
@@ -82,9 +82,9 @@ const styles = StyleSheet.create({
   content: { padding: 16 },
   sectionTitle: { fontSize: 24, fontFamily: 'Rubik-Bold', marginBottom: 20 },
   groupTitle: { fontSize: 18, fontFamily: 'Rubik-SemiBold', marginTop: 10, marginBottom: 10 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  grid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
     justifyContent: 'space-between',
     marginBottom: 20
   },

@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '../../../contexts/AppContext';
-import { Typography } from '../../../components/Typography';
-import { ServiceCard } from '../../../components/ServiceCard';
-import { Loader } from '../../../components/Loader';
-import { icons } from '../../../constants';
-import { api, resolveImageUrl } from '../../../services/api';
+import { useApp } from '../../src/contexts/AppContext';
+import { Typography } from '../../src/components/Typography';
+import { ServiceCard } from '../../src/components/ServiceCard';
+import { Loader } from '../../src/components/Loader';
+import { icons } from '../../src/constants';
+import { api, resolveImageUrl } from '../../src/services/api';
 
 export default function Home() {
   const { colors, t, user, notifications } = useApp();
@@ -106,7 +106,7 @@ export default function Home() {
               <Typography variant="h5" color={colors.black1}>{user?.display_name || 'Guest'}</Typography>
             </View>
           </View>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.bellBtn, { borderColor: colors.border }]}
             onPress={() => router.push('/notifications')}
           >

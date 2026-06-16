@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useApp } from '../../../contexts/AppContext';
-import { api } from '../../../services/api';
+import { useApp } from '../../src/contexts/AppContext';
+import { api } from '../../src/services/api';
 
 export default function AdminDisputes() {
   const { colors } = useApp();
@@ -30,8 +30,8 @@ export default function AdminDisputes() {
       `Confirm resolving as "${resolution}". Provide a reason:`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
+        { 
+          text: 'Confirm', 
           onPress: async (reason?: string) => {
             if (!reason) return Alert.alert('Error', 'Reason is required');
             try {
@@ -51,31 +51,31 @@ export default function AdminDisputes() {
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.title, { color: colors.black1 }]}>{item.title}</Text>
-        <Text style={[styles.status, {
-          color: item.status === 'resolved' ? '#10b981' : '#ef4444'
+        <Text style={[styles.status, { 
+          color: item.status === 'resolved' ? '#10b981' : '#ef4444' 
         }]}>
           {item.status.toUpperCase()}
         </Text>
       </View>
-
+      
       <Text style={{ color: colors.black2, marginBottom: 8 }}>Amount: {Number(item.amount).toLocaleString()} XAF</Text>
       <Text style={{ color: colors.black2, marginBottom: 16 }}>Reason: {item.dispute_reason || 'No reason provided'}</Text>
-
+      
       {item.status === 'disputed' && (
         <View style={styles.actions}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.btn, { backgroundColor: '#10b981' }]}
             onPress={() => handleResolve(item.id, 'provider_wins')}
           >
             <Text style={styles.btnText}>Provider Wins</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.btn, { backgroundColor: '#3b82f6' }]}
             onPress={() => handleResolve(item.id, 'split')}
           >
             <Text style={styles.btnText}>Split (50/50)</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.btn, { backgroundColor: '#ef4444' }]}
             onPress={() => handleResolve(item.id, 'beneficiary_wins')}
           >
