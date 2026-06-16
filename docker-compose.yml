@@ -30,8 +30,9 @@ services:
     container_name: skillmatch_backend
     restart: always
     ports:
-      - "127.0.0.1:3111:3001"
+      - "3111:3001"
     environment:
+      - HOST=0.0.0.0
       - PORT=3001
       - DB_USER=skillmatch_user
       - DB_PASSWORD=skillmatch_password
