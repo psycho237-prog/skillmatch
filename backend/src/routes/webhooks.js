@@ -184,29 +184,67 @@ router.post('/pawapay', async (req, res) => {
         return;
       }
 
-      const { depositId, status, amount, currency } = req.body;
-      if (!depositId || !status) {
-        console.warn('[PAWAPAY WEBHOOK] Missing depositId or status in body');
+      const txnId = req.body.depositId || req.body.payoutId || req.body.refundId;
+      if (!txnId || !status) {
+        console.warn('[PAWAPAY WEBHOOK] Missing transaction ID or status in body');
         return;
       }
 
-      console.log(`[PAWAPAY WEBHOOK] Processing callback. ID: ${depositId} | Status: ${status} | Amount: ${amount}`);
+      console.log(`[PAWAPAY WEBHOOK] Processing callback. ID: ${txnId} | Status: ${status} | Amount: ${amount}`);
 
-      // 1. Idempotency Check — skip if transaction already processed as COMPLETED
-      const txCheck = await query('SELECT * FROM escrow_transactions WHERE pawapay_deposit_id = $1', [depositId]);
+      // First check if it's a Wallet transaction (deposits/withdrawals from User Wallet)
+      const walletTxCheck = await query('SELECT * FROM wallet_transactions WHERE reference_id = $1 FOR UPDATE', [txnId]);
+      if (walletTxCheck.rowCount > 0) {
+        const txn = walletTxCheck.rows[0];
+        
+        // Idempotency: if already processed, return
+        if (txn.status === status.toLowerCase() || txn.status === 'completed' || txn.status === 'failed') {
+          console.log(`[PAWAPAY WEBHOOK] Wallet Transaction ${txnId} already processed.`);
+          return;
+        }
+
+        if (status === 'COMPLETED') {
+          if (txn.type === 'deposit') {
+            await query('UPDATE wallets SET balance = balance + $1 WHERE id = $2', [txn.amount, txn.wallet_id]);
+            await query("UPDATE wallet_transactions SET status = 'completed' WHERE id = $1", [txn.id]);
+            await query("UPDATE escrow_transactions SET status = 'COMPLETED' WHERE pawapay_deposit_id = $1", [txn.reference_id]);
+            await sendPushNotification(txn.user_id, 'Dépôt Réussi 🎉', `Votre compte a été crédité de ${txn.amount} FCFA.`, { transactionId: txn.id, type: 'deposit' });
+            notifyUsers(req, [txn.user_id], 'WALLET_DEPOSIT_SUCCESS', { title: 'Deposit Successful 🎉', body: `Your wallet was credited with ${txn.amount} ${txn.currency || 'FCFA'}.` });
+          } else if (txn.type === 'withdrawal') {
+            await query('UPDATE wallets SET pending_balance = pending_balance - $1 WHERE id = $2', [txn.amount, txn.wallet_id]);
+            await query("UPDATE wallet_transactions SET status = 'completed' WHERE id = $1", [txn.id]);
+            await query("UPDATE escrow_transactions SET status = 'COMPLETED' WHERE pawapay_payout_id = $1", [txn.reference_id]);
+            await sendPushNotification(txn.user_id, 'Retrait Traité 💸', `Votre retrait de ${txn.amount} FCFA a été traité.`, { transactionId: txn.id, type: 'withdrawal' });
+            notifyUsers(req, [txn.user_id], 'WALLET_WITHDRAWAL_SUCCESS', { title: 'Withdrawal Processed 💸', body: `Your withdrawal of ${txn.amount} ${txn.currency || 'FCFA'} was processed.` });
+          }
+        } else if (status === 'FAILED') {
+          if (txn.type === 'withdrawal') {
+            await query('UPDATE wallets SET balance = balance + $1, pending_balance = pending_balance - $1 WHERE id = $2', [txn.amount, txn.wallet_id]);
+          }
+          await query("UPDATE wallet_transactions SET status = 'failed', description = $1 WHERE id = $2", [`${txn.description} - Echec`, txn.id]);
+          await query("UPDATE escrow_transactions SET status = 'FAILED' WHERE pawapay_deposit_id = $1 OR pawapay_payout_id = $1", [txn.reference_id]);
+          const verb = txn.type === 'deposit' ? 'Dépôt' : 'Retrait';
+          await sendPushNotification(txn.user_id, `${verb} Échoué ⚠️`, `Votre transaction de ${txn.amount} FCFA a échoué.`, { transactionId: txn.id, type: txn.type });
+          notifyUsers(req, [txn.user_id], 'WALLET_TX_FAILED', { title: `${verb} Failed ⚠️`, body: `Your transaction of ${txn.amount} failed.` });
+        }
+        return; // Finished processing wallet transaction
+      }
+
+      // If not a Wallet Transaction, check Escrow Transaction
+      const txCheck = await query('SELECT * FROM escrow_transactions WHERE pawapay_deposit_id = $1 OR pawapay_payout_id = $1', [txnId]);
       if (txCheck.rowCount > 0 && txCheck.rows[0].status === 'COMPLETED') {
-        console.log(`[PAWAPAY WEBHOOK] Transaction ${depositId} already processed.`);
+        console.log(`[PAWAPAY WEBHOOK] Escrow Transaction ${txnId} already processed.`);
         return;
       }
 
-      // 2. Find corresponding Escrow
+      // Find corresponding Escrow
       const escrowRes = await query(
         'SELECT * FROM escrows WHERE deposit_id_initiator = $1 OR deposit_id_counterparty = $2',
-        [depositId, depositId]
+        [txnId, txnId]
       );
 
       if (escrowRes.rowCount === 0) {
-        console.warn(`[PAWAPAY WEBHOOK] Escrow not found for depositId: ${depositId}`);
+        console.warn(`[PAWAPAY WEBHOOK] Transaction not found anywhere for ID: ${txnId}`);
         return;
       }
       const escrow = escrowRes.rows[0];
@@ -214,18 +252,18 @@ router.post('/pawapay', async (req, res) => {
       const serviceRes = await query('SELECT * FROM services WHERE id = $1', [escrow.service_id]);
       const service = serviceRes.rows[0];
 
-      const isInitiator = (escrow.deposit_id_initiator === depositId);
+      const isInitiator = (escrow.deposit_id_initiator === txnId);
       const userId = isInitiator ? escrow.initiator_id : escrow.counterparty_id;
 
       if (status === 'COMPLETED') {
         // Record/Update Transaction as COMPLETED
         if (txCheck.rowCount > 0) {
-          await query('UPDATE escrow_transactions SET status = \'COMPLETED\' WHERE pawapay_deposit_id = $1', [depositId]);
+          await query('UPDATE escrow_transactions SET status = \'COMPLETED\' WHERE pawapay_deposit_id = $1 OR pawapay_payout_id = $1', [txnId]);
         } else {
           await query(
             `INSERT INTO escrow_transactions (user_id, type, pawapay_deposit_id, amount, currency, status, created_at)
              VALUES ($1, 'DEPOSIT', $2, $3, $4, 'COMPLETED', NOW())`,
-            [userId, depositId, amount, currency]
+            [userId, txnId, amount, currency]
           );
         }
 
@@ -281,12 +319,12 @@ router.post('/pawapay', async (req, res) => {
       } else if (status === 'FAILED') {
         // Record transaction as FAILED
         if (txCheck.rowCount > 0) {
-          await query('UPDATE escrow_transactions SET status = \'FAILED\' WHERE pawapay_deposit_id = $1', [depositId]);
+          await query('UPDATE escrow_transactions SET status = \'FAILED\' WHERE pawapay_deposit_id = $1 OR pawapay_payout_id = $1', [txnId]);
         } else {
           await query(
             `INSERT INTO escrow_transactions (user_id, type, pawapay_deposit_id, amount, currency, status, created_at)
              VALUES ($1, 'DEPOSIT', $2, $3, $4, 'FAILED', NOW())`,
-            [userId, depositId, amount, currency]
+            [userId, txnId, amount, currency]
           );
         }
 
