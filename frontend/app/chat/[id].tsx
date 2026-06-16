@@ -351,6 +351,7 @@ export default function ChatRoom() {
   };
 
   const uploadAndSend = async (uri: string, name: string, mimeType: string, prefix: string) => {
+    if (!user) return;
     setUploadingMedia(true);
     try {
       const uploadRes = await api.uploadFiles([{ uri, name, mimeType }]);
@@ -363,7 +364,7 @@ export default function ChatRoom() {
       
       const messageData = {
         conversation_id: actualConvId as string,
-        sender_id: user?.id,
+        sender_id: user.id,
         content,
       };
 
@@ -643,11 +644,7 @@ export default function ChatRoom() {
           onPress={handleSend}
           disabled={!input.trim()}
         >
-          {input.trim() ? (
-            <Image source={icons.send} style={[styles.sendIcon, { tintColor: '#FFF' }]} />
-          ) : (
-             <Image source={icons.camera} style={[styles.sendIcon, { tintColor: colors.black3, width: 24, height: 24 }]} />
-          )}
+          <Image source={icons.send} style={[styles.sendIcon, { tintColor: input.trim() ? '#FFF' : colors.black3 }]} />
         </TouchableOpacity>
       </View>
 
@@ -786,7 +783,7 @@ export default function ChatRoom() {
             </TouchableOpacity>
 
             {disputeHasProof && (
-              <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 16 }]}>
+              <View style={[styles.disputeInputGroup, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 16 }]}>
                 <TextInput
                   placeholder="Paste dispute proof URL here"
                   placeholderTextColor={colors.black3}
@@ -840,7 +837,7 @@ export default function ChatRoom() {
 
             {/* Comment field */}
             <Typography variant="body2" weight="bold" style={{ marginBottom: 8, marginTop: 16 }}>Comments (Optional)</Typography>
-            <View style={[styles.inputGroup, styles.textAreaGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.disputeInputGroup, styles.textAreaGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TextInput
                 placeholder="Describe your experience..."
                 placeholderTextColor={colors.black3}
@@ -1143,7 +1140,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
   },
-  inputGroup: {
+  disputeInputGroup: {
     width: '100%',
     height: 56,
     borderRadius: 16,

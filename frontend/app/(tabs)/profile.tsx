@@ -73,7 +73,7 @@ export default function Profile() {
     return langs[language] || t('english');
   };
 
-  const menuItems = [
+  const menuItems: any[] = [
     { icon: icons.calendar, title: t('my_services'), action: () => router.push('/my-services') },
     { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
     { icon: icons.wallet, title: 'Payments', action: () => router.push('/(tabs)/wallet') },
@@ -84,13 +84,13 @@ export default function Profile() {
       icon: icons.bell, 
       title: t('notifications_setting'), 
       action: () => {
-        socketService.socket?.emit('new_message', {
+        (socketService as any).socket?.emit('new_message', {
           conversation_id: 'test',
           sender_id: 'system',
           content: 'This is a test notification! It works perfectly.'
         });
         
-        socketService.socket?.io.engine.onPacket({
+        (socketService as any).socket?.io.engine.onPacket({
           type: 2, 
           nsp: '/', 
           data: ['new_message', {

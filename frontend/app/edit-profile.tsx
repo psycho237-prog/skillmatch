@@ -97,7 +97,7 @@ export default function EditProfile() {
               style={styles.avatar} 
             />
             <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
-              <Image source={icons.camera} style={{width: 14, height: 14, tintColor: '#FFF'}} />
+              <Image source={icons.edit} style={{width: 14, height: 14, tintColor: '#FFF'}} />
             </View>
           </TouchableOpacity>
           <Typography variant="body2" color={colors.primary} style={{marginTop: 12}}>Change Profile Photo</Typography>
