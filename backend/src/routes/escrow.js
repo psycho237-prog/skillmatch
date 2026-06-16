@@ -406,17 +406,6 @@ async function processEscrowPayout(escrow, service) {
       [crypto.randomUUID(), providerId, feeAmount, providerCurrency, escrow.id]
     );
 
-<<<<<<< HEAD
-=======
-    // Credit platform account commissions
-    await query(
-      `UPDATE platform_account 
-       SET balance = balance + $1, total_commissions = total_commissions + $1, total_transactions = total_transactions + 1
-       WHERE id = 1`,
-      [feeAmount]
-    );
-
->>>>>>> e31deed552188212fb9532e35533602adb1fea82
     // Call PawaPay Payout
     await pawapay.initiatePayout(
       payoutId,
@@ -619,6 +608,7 @@ router.get('/active/:conversationId', authenticateToken, async (req, res) => {
     res.json({ escrow: activeRes.rows[0] });
   } catch (error) {
     console.error('Get active escrow error:', error);
+    console.log('peeer');
     res.status(500).json({ error: 'Failed to fetch active escrow' });
   }
 });
