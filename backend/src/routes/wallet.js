@@ -4,7 +4,7 @@ const { query } = require('../config/database');
 const { processDeposit, processWithdrawal } = require('../config/wallet');
 const crypto = require('crypto');
 
-const PAWAPAY_TOKEN = 'eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzE4NDAzMSwiaWF0IjoxNzgxNTY0ODMxLCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0ZTgwZWU0NS0zNTJkLTRjYzMtOGY4My03MmJkZjViMjkyNjYifQ.8xYbS6zbVuYRi8_FGEmsvmGg-KjxRDbNafk9iu8MxqRytL2s3l3Zk332KLZBidRYIt_fLmo0eOvqGkvsXRG2aQ';
+const PAWAPAY_TOKEN = process.env.PAWAPAY_API_KEY || 'YOUR_FALLBACK_TOKEN';
 const PAWAPAY_BASE_URL = 'https://api.sandbox.pawapay.io';
 const { authenticateToken } = require('../middleware/auth');
 
