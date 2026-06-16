@@ -19,8 +19,9 @@ services:
     image: redis:7-alpine
     container_name: skillmatch_redis
     restart: always
+    command: redis-server --port 6900
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6900:6900"
     volumes:
       - redisdata:/data
 
@@ -56,7 +57,7 @@ services:
     environment:
       - PORT=4000
       - DATABASE_URL=postgres://skillmatch_user:skillmatch_password@postgres:5432/skillmatch
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://redis:6900
       - JWT_SECRET=your_super_secret_jwt_key_in_production
       - BAILEYS_STORE_PATH=./baileys_store
       - SMS_PROVIDER=whatsapp
