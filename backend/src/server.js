@@ -20,6 +20,7 @@ const transactionsRoutes = require('./routes/transactions');
 const { setupChatSocket } = require('./sockets/chat');
 const { initBaileys } = require('./config/whatsapp');
 const { startCronScheduler } = require('./services/cron');
+const { runMigrations } = require('./config/migrations');
 
 const app = express();
 const server = http.createServer(app);
@@ -65,15 +66,33 @@ app.get('/api/health', (req, res) => {
 setupChatSocket(io);
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, HOST, async () => {
-  console.log(`🚀 SkillMatch server running on ${HOST}:${PORT}`);
-  try {
-    await initBaileys();
-    console.log('💚 Baileys WhatsApp client initialized successfully.');
-  } catch (err) {
-    console.error('❌ Failed to initialize Baileys:', err);
-  }
-  startCronScheduler();
-});
+
+// Run database migrations on startup
+runMigrations()
+  .then(() => {
+    server.listen(PORT, HOST, async () => {
+      console.log(`🚀 SkillMatch server running on ${HOST}:${PORT}`);
+      try {
+        await initBaileys();
+        console.log('💚 Baileys WhatsApp client initialized successfully.');
+      } catch (err) {
+        console.error('❌ Failed to initialize Baileys:', err);
+      }
+      startCronScheduler();
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Database migration failed. Server starting anyway...', err);
+    server.listen(PORT, HOST, async () => {
+      console.log(`🚀 SkillMatch server running on ${HOST}:${PORT}`);
+      try {
+        await initBaileys();
+        console.log('💚 Baileys WhatsApp client initialized successfully.');
+      } catch (err) {
+        console.error('❌ Failed to initialize Baileys:', err);
+      }
+      startCronScheduler();
+    });
+  });
 
 module.exports = { app, server, io };

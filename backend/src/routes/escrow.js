@@ -406,6 +406,14 @@ async function processEscrowPayout(escrow, service) {
       [crypto.randomUUID(), providerId, feeAmount, providerCurrency, escrow.id]
     );
 
+    // Credit platform account commissions
+    await query(
+      `UPDATE platform_account 
+       SET balance = balance + $1, total_commissions = total_commissions + $1, total_transactions = total_transactions + 1
+       WHERE id = 1`,
+      [feeAmount]
+    );
+
     // Call PawaPay Payout
     await pawapay.initiatePayout(
       payoutId,
