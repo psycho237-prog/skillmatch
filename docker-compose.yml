@@ -10,10 +10,19 @@ services:
       POSTGRES_PASSWORD: skillmatch_password
       POSTGRES_DB: skillmatch
     ports:
-      - "5432:5432"
+      - "3775:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/local_schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    container_name: skillmatch_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
 
   backend:
     build: ./backend
@@ -34,8 +43,28 @@ services:
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/whatsapp-auth:/app/whatsapp-auth
+      - ./backend/baileys_store:/app/baileys_store
     depends_on:
       - postgres
+
+  otp-baileys-api:
+    build: ./otp-baileys-api
+    container_name: skillmatch_otp_api
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgres://skillmatch_user:skillmatch_password@postgres:5432/skillmatch
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_super_secret_jwt_key_in_production
+      - BAILEYS_STORE_PATH=./baileys_store
+      - SMS_PROVIDER=whatsapp
+    volumes:
+      - ./otp-baileys-api/baileys_store:/app/baileys_store
+    depends_on:
+      - postgres
+      - redis
 
   admin-panel:
     build: 
@@ -44,9 +73,10 @@ services:
     container_name: skillmatch_admin
     restart: always
     ports:
-      - "8080:8080" # Secret port only you know/proxy
+      - "8080:8080" # Exposed to 8080
     environment:
       - VITE_API_URL=http://localhost:3001/api
 
 volumes:
   pgdata:
+  redisdata:
