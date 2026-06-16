@@ -1,101 +1,81 @@
-const { Pool } = require('pg');
+require('dotenv').config();
+const { pool } = require('./src/config/database');
 const bcrypt = require('bcryptjs');
 
-const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'skillmatch',
-  user: 'skillmatch_user',
-  password: 'skillmatch123',
-});
-
 async function seed() {
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash('password123', salt);
+  try {
+    console.log('Seeding database...');
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash('password123', salt);
 
-  console.log('Clearing old data...');
-  await pool.query('DELETE FROM services');
-  await pool.query('DELETE FROM users');
+    // Seed Users
+    const users = [
+      { phone: '237691234567', name: 'Alice Smith' },
+      { phone: '237698765432', name: 'Bob Johnson' },
+      { phone: '237690000000', name: 'Charlie Dev' },
+    ];
 
-  console.log('Seeding users...');
-  const user1 = (await pool.query(
-    'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['1234567890', passwordHash, 'Alice Smith', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/13e5945d8e3e96bec4da657ebd8a187839148c75']
-  )).rows[0];
+    const insertedUsers = [];
+    for (const u of users) {
+      const res = await pool.query(
+        `INSERT INTO users (phone_number, password_hash, display_name) 
+         VALUES ($1, $2, $3) ON CONFLICT (phone_number) DO NOTHING RETURNING id`,
+        [u.phone, password_hash, u.name]
+      );
+      if (res.rows.length > 0) insertedUsers.push(res.rows[0].id);
+    }
 
-  const user2 = (await pool.query(
-    'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['0987654321', passwordHash, 'Bob Builder', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1ae504e2d55428c2a94076622fe8ddd6d8d8476d']
-  )).rows[0];
+    // Get all users if we didn't insert them just now
+    const allUsersRes = await pool.query('SELECT id FROM users LIMIT 3');
+    const userIds = allUsersRes.rows.map(r => r.id);
 
-  const user3 = (await pool.query(
-    'INSERT INTO users (phone_number, password_hash, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id',
-    ['5555555555', passwordHash, 'Charlie Design', '/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
-  )).rows[0];
+    if (userIds.length > 0) {
+      const providerId = userIds[0];
+      const providerId2 = userIds.length > 1 ? userIds[1] : userIds[0];
 
-  console.log('Seeding services...');
-  await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      user1.id, 
-      'Bitch Web Developer', 
-      'I can build scalable, responsive web applications using React, Node.js, and PostgreSQL. With over 5 years of professional experience, I bring your ideas to life.', 
-      'Development', 
-      45.00, 
-      'hourly', 
-      'New York, NY', 
-      true, 
-      1, 
-      4.9, 
-      24, 
-      ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png']
-    ]
-  );
+      // Seed Services
+      const services = [
+        {
+          user_id: providerId,
+          title: 'Professional Web Development',
+          description: 'I will build a modern, responsive website using React and Node.js.',
+          category: 'Programming',
+          price: 50000,
+          location_name: 'Douala, CM',
+        },
+        {
+          user_id: providerId2,
+          title: 'Graphic Design & Logo Creation',
+          description: 'High quality vector logos and branding materials for your startup.',
+          category: 'Design',
+          price: 15000,
+          location_name: 'Yaoundé, CM',
+        },
+        {
+          user_id: providerId,
+          title: 'Home Cleaning Service',
+          description: 'Deep cleaning for apartments and offices. Fast and reliable.',
+          category: 'Cleaning',
+          price: 10000,
+          location_name: 'Douala, CM',
+        }
+      ];
 
-  await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      user2.id, 
-      'Emergency Plumbing Repair', 
-      '24/7 plumbing services for leaks, burst pipes, and bathroom installations. Expert diagnosis and quick fixes to prevent water damage.', 
-      'Repair', 
-      85.00, 
-      'fixed', 
-      'Chicago, IL', 
-      true, 
-      1, 
-      4.7, 
-      12, 
-      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
-    ]
-  );
+      for (const s of services) {
+        await pool.query(
+          `INSERT INTO services (user_id, title, description, category, price, location) 
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [s.user_id, s.title, s.description, s.category, s.price, s.location_name]
+        );
+      }
+    }
 
-  await pool.query(
-    `INSERT INTO services (user_id, title, description, category, price, price_type, location, is_active, featured, rating, review_count, images) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      user3.id, 
-      'Logo & UI/UX Design', 
-      'Modern, pixel-perfect user interface design for your mobile apps and websites. Unlimited revisions until you are completely satisfied!', 
-      'Design', 
-      120.00, 
-      'fixed', 
-      'Remote', 
-      true, 
-      0, 
-      5.0, 
-      38, 
-      ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
-    ]
-  );
-
-  console.log('✅ Seed completed successfully!');
-  pool.end();
+    console.log('Seeding complete!');
+    process.exit(0);
+  } catch (err) {
+    console.error('Seeding error:', err);
+    process.exit(1);
+  }
 }
 
-seed().catch(err => {
-  console.error('❌ Seed error:', err);
-  pool.end();
-});
+seed();
