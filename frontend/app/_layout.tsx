@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { AppProvider, useApp } from '../src/contexts/AppContext';
+import { setupNotificationHandlers } from '../src/services/notifications';
+import { NotificationBanner } from '../src/components/NotificationBanner';
 import { View, ActivityIndicator, Image, StyleSheet} from 'react-native';
 import { images } from '../src/constants';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -33,6 +35,7 @@ function RootLayoutNav({ onLayoutReady }: { onLayoutReady: () => void }) {
           <Stack.Screen name="service/[id]" options={{ presentation: 'card' }} />
           <Stack.Screen name="chat/[id]" options={{ presentation: 'card' }} />
         </Stack>
+        <NotificationBanner />
       </Animated.View>
     </View>
   );
