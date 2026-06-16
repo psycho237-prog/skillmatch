@@ -185,6 +185,8 @@ router.post('/pawapay', async (req, res) => {
       }
 
       const txnId = req.body.depositId || req.body.payoutId || req.body.refundId;
+      const { status, amount } = req.body;
+      
       if (!txnId || !status) {
         console.warn('[PAWAPAY WEBHOOK] Missing transaction ID or status in body');
         return;
