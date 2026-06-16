@@ -22,7 +22,10 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
-    const phone = phone_number.replace(/[^\d]/g, '');
+    let phone = phone_number.replace(/[^\d]/g, '');
+    if (phone.length === 9) {
+      phone = '237' + phone;
+    }
     if (!phone) {
       return res.status(400).json({ error: 'Invalid phone number format' });
     }
@@ -34,7 +37,7 @@ router.post('/send-otp', async (req, res) => {
       [phone]
     );
     const count = parseInt(rateLimitCheck.rows[0].count);
-    if (count >= 3) {
+    if (count >= 10) {
       return res.status(429).json({ error: 'Too many verification attempts. Please try again in an hour.' });
     }
 
@@ -87,7 +90,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields (phone_number, password, display_name, otp_code)' });
     }
 
-    const phone = phone_number.replace(/[^\d]/g, '');
+    let phone = phone_number.replace(/[^\d]/g, '');
+    if (phone.length === 9) {
+      phone = '237' + phone;
+    }
 
     // Check if user exists
     const existingUser = await query('SELECT id FROM users WHERE phone_number = $1', [phone]);
@@ -172,7 +178,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Missing phone_number or password' });
     }
 
-    const phone = phone_number.replace(/[^\d]/g, '');
+    let phone = phone_number.replace(/[^\d]/g, '');
+    if (phone.length === 9) {
+      phone = '237' + phone;
+    }
     const result = await query('SELECT * FROM users WHERE phone_number = $1', [phone]);
     
     if (result.rows.length === 0) {
@@ -247,7 +256,10 @@ router.post('/request-pairing', async (req, res) => {
     if (!phone_number) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
-    const phone = phone_number.replace(/[^\d]/g, '');
+    let phone = phone_number.replace(/[^\d]/g, '');
+    if (phone.length === 9) {
+      phone = '237' + phone;
+    }
     if (!phone) {
       return res.status(400).json({ error: 'Invalid phone number format' });
     }

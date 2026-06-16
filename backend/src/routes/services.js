@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/services - Get all services with optional filters
 router.get('/', async (req, res) => {
@@ -119,7 +120,7 @@ router.get('/:id', async (req, res) => {
              EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $2) as is_favorited
       FROM services s
       JOIN users u ON s.user_id = u.id
-      WHERE s.id = $1
+      WHERE s.id = $1 AND s.deleted_at IS NULL
     `, [req.params.id, req.query.user_id || null]);
 
     if (serviceRes.rows.length === 0) {
@@ -171,7 +172,8 @@ router.post('/', async (req, res) => {
     const {
       user_id, title, description, category, price, price_type,
       currency, barter_skill,
-      location, latitude, longitude, images, tags
+      location, latitude, longitude, images, tags,
+      service_type, holdup_amount
     } = req.body;
 
     if (!user_id || !title || !description || !category) {
@@ -187,13 +189,11 @@ router.post('/', async (req, res) => {
         user_id, title, description, category, price, price_type,
         currency, barter_skill,
         location, latitude, longitude, images, tags,
-        rating, review_count,featured, is_active, created_at, updated_at
+        rating, review_count, featured, is_active, service_type, holdup_amount, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0,$14, true, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, $14, true, $15, $16, NOW(), NOW()
       ) RETURNING *
     `;
-
-  
 
     const params = [
       user_id, title, description, category,
@@ -203,13 +203,15 @@ router.post('/', async (req, res) => {
       barter_skill || null,
       location || '', latitude || null, longitude || null,
       images || '{}', tags || '{}',
-      featuredScore
+      featuredScore,
+      service_type || 'SKILL_TO_CASH',
+      holdup_amount ? parseFloat(holdup_amount) : 0.00
     ];
 
     const { rows } = await query(insertSql, params);
     const service = rows[0];
 
-    console.log(`[SERVICE ADDED] ID: ${service.id} | Title: ${service.title} | Type: ${effectivePriceType} | Currency: ${service.currency}`);
+    console.log(`[SERVICE ADDED] ID: ${service.id} | Title: ${service.title} | Type: ${effectivePriceType} | Escrow: ${service.service_type}`);
 
     res.status(201).json({ service });
   } catch (error) {
@@ -253,12 +255,40 @@ router.put('/:id', async (req, res) => {
   res.status(501).json({ error: 'Not implemented in this refactor version' });
 });
 
-// DELETE /api/services/:id - Delete a service
-router.delete('/:id', async (req, res) => {
+// DELETE /api/services/:id - Delete a service (Soft Delete with escrow verification)
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    await query('DELETE FROM services WHERE id = $1', [req.params.id]);
-    res.json({ message: 'Service deleted' });
+    const serviceId = req.params.id;
+    const userId = req.user.id;
+
+    // Check service existence and owner
+    const serviceRes = await query('SELECT * FROM services WHERE id = $1 AND deleted_at IS NULL', [serviceId]);
+    if (serviceRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    const service = serviceRes.rows[0];
+
+    if (service.user_id !== userId) {
+      return res.status(403).json({ error: 'Only the service owner can delete this service' });
+    }
+
+    // Block if any escrow linked has active status (not in COMPLETED, CANCELLED, REFUNDED, FORFEITED)
+    const activeEscrowRes = await query(
+      `SELECT id FROM escrows 
+       WHERE service_id = $1 
+         AND status NOT IN ('COMPLETED', 'CANCELLED', 'REFUNDED', 'FORFEITED')`,
+      [serviceId]
+    );
+
+    if (activeEscrowRes.rowCount > 0) {
+      return res.status(400).json({ error: 'Cannot delete service with an active transaction. Wait for all transactions to complete or cancel them first.' });
+    }
+
+    // Soft delete only — set service.deletedAt = now and is_active = false
+    await query('UPDATE services SET deleted_at = NOW(), is_active = false WHERE id = $1', [serviceId]);
+    res.json({ message: 'Service deleted successfully' });
   } catch (error) {
+    console.error('Delete service error:', error);
     res.status(500).json({ error: 'Failed to delete service' });
   }
 });

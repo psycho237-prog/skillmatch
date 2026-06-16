@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Share, Linking, Modal, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Share, Linking, Modal, Pressable, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, resolveImageUrl } from '../../src/services/api';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,22 @@ export default function Profile() {
   
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [requirementsModalVisible, setRequirementsModalVisible] = useState(false);
+  const [readinessData, setReadinessData] = useState<any>(null);
+  const [loadingReadiness, setLoadingReadiness] = useState(false);
+
+  const fetchReadiness = async () => {
+    if (!user) return;
+    try {
+      setLoadingReadiness(true);
+      const res = await api.getUserReadiness(user.id);
+      setReadinessData(res.readiness);
+    } catch (e) {
+      console.error('Failed to fetch readiness', e);
+    } finally {
+      setLoadingReadiness(false);
+    }
+  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -88,14 +104,14 @@ export default function Profile() {
   const menuItems = [
     { icon: icons.calendar, title: t('my_services'), action: () => {} },
     { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
-    { icon: icons.wallet, title: 'Payments ', action: () => {} },
+    { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
+    { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
     { icon: icons.person, title: t('profile'), action: () => {} },
     { 
       icon: icons.bell, 
       title: t('notifications_setting'), 
       rightElement: <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ true: colors.primary }} /> 
     },
-    { icon: icons.shield, title: t('security'), action: () => {} },
     { 
       icon: icons.language, 
       title: t('language'), 
@@ -212,6 +228,140 @@ export default function Profile() {
         }}
         colors={colors}
       />
+      {/* Requirements Checklist Modal */}
+      <Modal visible={requirementsModalVisible} transparent animationType="slide" onRequestClose={() => setRequirementsModalVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setRequirementsModalVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: '85%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Typography variant="h4">Readiness Checklist</Typography>
+              <TouchableOpacity onPress={() => setRequirementsModalVisible(false)}>
+                <Typography variant="h5" color={colors.primary}>Close</Typography>
+              </TouchableOpacity>
+            </View>
+
+            {loadingReadiness || !readinessData ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Typography variant="body2" color={colors.black3} style={{ marginTop: 12 }}>Checking database...</Typography>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={{ marginBottom: 24, padding: 16, backgroundColor: colors.card, borderRadius: 16 }}>
+                  <Typography variant="h5" style={{ marginBottom: 8 }}>
+                    Readiness Score: {readinessData.score}/{readinessData.total}
+                  </Typography>
+                  <Typography variant="body2" color={colors.black2} style={{ marginBottom: 12 }}>
+                    You are {Math.round((readinessData.score / readinessData.total) * 100)}% ready to transact.
+                  </Typography>
+                  
+                  {/* Progress Bar */}
+                  <View style={{ height: 8, width: '100%', backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
+                    <View style={{ height: '100%', width: `${(readinessData.score / readinessData.total) * 100}%`, backgroundColor: colors.primary }} />
+                  </View>
+                </View>
+
+                {/* Checklist items */}
+                <ChecklistItem 
+                  checked={readinessData.phoneVerified} 
+                  title="Phone number verified" 
+                  desc="Required for PawaPay transactions"
+                  onFix={() => {
+                    setRequirementsModalVisible(false);
+                    Alert.alert("Verify Phone", "Your phone number is linked and verified at onboarding.");
+                  }}
+                  colors={colors}
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.mobileNetworkDetected} 
+                  title="Mobile network detected" 
+                  desc="Correspondent auto-detected on profile"
+                  onFix={() => {
+                    setRequirementsModalVisible(false);
+                    Alert.alert("Network Info", "Your network operator is predicted automatically from your phone format.");
+                  }}
+                  colors={colors}
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.profilePhotoUploaded} 
+                  title="Profile photo uploaded" 
+                  desc="A valid avatar image is set"
+                  onFix={() => {
+                    setRequirementsModalVisible(false);
+                    pickImage();
+                  }}
+                  colors={colors}
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.servicePosted} 
+                  title="At least one service posted" 
+                  desc="You have published an offering"
+                  onFix={() => {
+                    setRequirementsModalVisible(false);
+                    router.push('/post-service');
+                  }}
+                  colors={colors}
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.holdupAmountSet} 
+                  title="Escrow hold set on all services" 
+                  desc="No service has a null/zero holdup amount"
+                  onFix={() => {
+                    setRequirementsModalVisible(false);
+                    router.push('/post-service');
+                  }}
+                  colors={colors}
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.walletFunded} 
+                  title="Wallet is funded" 
+                  desc="Wallet balance must be greater than 0"
+                  onFix={async () => {
+                    try {
+                      setLoadingReadiness(true);
+                      const topRes = await api.topUpWallet(5000);
+                      Alert.alert("Wallet Funded", `Top up successful! Sandbox wallet credited. New balance: ${topRes.balance} XAF`);
+                      fetchReadiness();
+                    } catch (e: any) {
+                      Alert.alert("Error", e.message || "Failed to top up");
+                    } finally {
+                      setLoadingReadiness(false);
+                    }
+                  }}
+                  colors={colors}
+                  fixLabel="TOP UP"
+                />
+
+                <ChecklistItem 
+                  checked={readinessData.identityVerified} 
+                  title="Identity verified" 
+                  desc="Name matches mobile money account"
+                  onFix={async () => {
+                    if (!user) return;
+                    try {
+                      setLoadingReadiness(true);
+                      const updatedUser = await api.updateUser(user.id, { identity_verified: true });
+                      await setUser(updatedUser.user, undefined);
+                      Alert.alert("Verified", "Sandbox identity matches mobile money account!");
+                      fetchReadiness();
+                    } catch (e: any) {
+                      Alert.alert("Error", e.message || "Failed to verify identity");
+                    } finally {
+                      setLoadingReadiness(false);
+                    }
+                  }}
+                  colors={colors}
+                  fixLabel="VERIFY"
+                />
+              </ScrollView>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -344,3 +494,20 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   }
 });
+
+function ChecklistItem({ checked, title, desc, onFix, colors, fixLabel = "FIX →" }: any) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <Typography variant="h4" style={{ marginRight: 16 }}>{checked ? "✅" : "❌"}</Typography>
+      <View style={{ flex: 1 }}>
+        <Typography variant="h6" color={checked ? colors.black1 : colors.black2}>{title}</Typography>
+        <Typography variant="caption" color={colors.black3}>{desc}</Typography>
+      </View>
+      {!checked && (
+        <TouchableOpacity style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }} onPress={onFix}>
+          <Typography variant="caption" color="white" weight="bold">{fixLabel}</Typography>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}

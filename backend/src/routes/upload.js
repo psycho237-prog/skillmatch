@@ -11,14 +11,25 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Configure storage
+const mimeToExt = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `file-${uniqueSuffix}${ext}`);
+    // Derive extension from MIME type (reliable on Android) or fallback to originalname
+    const mimeExt = mimeToExt[file.mimetype];
+    const nameExt = path.extname(file.originalname || '').toLowerCase().replace('.', '');
+    const ext = mimeExt || nameExt || 'jpg';
+    cb(null, `file-${uniqueSuffix}.${ext}`);
   }
 });
 

@@ -291,4 +291,181 @@ router.post('/:id/proof', async (req, res) => {
   }
 });
 
+// GET /api/transactions/history
+router.get('/history', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 20, type = 'ALL' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let sql = `
+      SELECT t.id as "transactionId",
+             t.type,
+             t.status,
+             t.amount::float as amount,
+             t.currency,
+             COALESCE(e.platform_fee::float, 0) as "platformFee",
+             COALESCE(t.pawapay_deposit_id, t.pawapay_payout_id) as "pawapayRef",
+             t.created_at as "createdAt",
+             COALESCE(e.rating_pending, false) as "ratingPending",
+             CASE 
+                WHEN e.id IS NOT NULL THEN
+                  json_build_object(
+                    'id', e.id,
+                    'type', e.type,
+                    'status', e.status,
+                    'timeline', json_build_array(
+                      json_build_object('event', 'INITIATED', 'at', e.created_at),
+                      json_build_object('event', 'LOCKED', 'at', e.updated_at),
+                      json_build_object('event', 'PROVIDER_MARKED_DONE', 'at', e.provider_confirmed_at),
+                      json_build_object('event', e.status, 'at', e.client_confirmed_at)
+                    )
+                  )
+                ELSE NULL
+             END as escrow,
+             CASE
+                WHEN s.id IS NOT NULL THEN
+                  json_build_object(
+                    'id', s.id,
+                    'title', s.title,
+                    'serviceType', s.service_type,
+                    'price', s.price::float,
+                    'holdupAmount', s.holdup_amount::float
+                  )
+                ELSE NULL
+             END as service,
+             CASE
+                WHEN c.id IS NOT NULL THEN
+                  json_build_object(
+                    'id', c.id,
+                    'name', c.display_name,
+                    'avatar', c.avatar_url,
+                    'averageRating', c.average_rating::float
+                  )
+                ELSE NULL
+             END as counterparty
+      FROM escrow_transactions t
+      LEFT JOIN escrows e ON t.escrow_id = e.id
+      LEFT JOIN services s ON e.service_id = s.id
+      LEFT JOIN users c ON (c.id = (CASE WHEN t.user_id = e.initiator_id THEN e.counterparty_id ELSE e.initiator_id END))
+      WHERE t.user_id = $1
+    `;
+
+    const params = [userId];
+    let paramCount = 2;
+
+    if (type !== 'ALL') {
+      sql += ` AND t.type = $${paramCount++}`;
+      params.push(type);
+    }
+
+    sql += ` ORDER BY t.created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const { rows } = await query(sql, params);
+
+    res.json({ transactions: rows });
+  } catch (error) {
+    console.error('History fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction history' });
+  }
+});
+
+// GET /api/transactions/summary
+router.get('/summary', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get Total Earned (completed payouts)
+    const earnedRes = await query(
+      `SELECT COALESCE(SUM(amount), 0)::float as sum 
+       FROM escrow_transactions 
+       WHERE user_id = $1 AND type = 'PAYOUT' AND status = 'COMPLETED'`,
+      [userId]
+    );
+
+    // Get Total Spent (completed deposits)
+    const spentRes = await query(
+      `SELECT COALESCE(SUM(amount), 0)::float as sum 
+       FROM escrow_transactions 
+       WHERE user_id = $1 AND type = 'DEPOSIT' AND status = 'COMPLETED'`,
+      [userId]
+    );
+
+    // Get Active Escrows count
+    const activeRes = await query(
+      `SELECT COUNT(*)::int as count 
+       FROM escrows 
+       WHERE (initiator_id = $1 OR counterparty_id = $1) 
+         AND status NOT IN ('COMPLETED', 'CANCELLED', 'REFUNDED', 'FORFEITED')`,
+      [userId]
+    );
+
+    // Get Completed Deals count
+    const completedRes = await query(
+      `SELECT COUNT(*)::int as count 
+       FROM escrows 
+       WHERE (initiator_id = $1 OR counterparty_id = $1) 
+         AND status = 'COMPLETED'`,
+      [userId]
+    );
+
+    // Get Disputes count (DISPUTED or FORFEITED)
+    const disputesRes = await query(
+      `SELECT COUNT(*)::int as count 
+       FROM escrows 
+       WHERE (initiator_id = $1 OR counterparty_id = $1) 
+         AND status IN ('DISPUTED', 'FORFEITED')`,
+      [userId]
+    );
+
+    // Get User wallet currency
+    const walletRes = await query('SELECT currency FROM wallets WHERE user_id = $1', [userId]);
+    const currency = walletRes.rowCount > 0 ? walletRes.rows[0].currency : 'XAF';
+
+    res.json({
+      totalEarned: earnedRes.rows[0].sum,
+      totalSpent: spentRes.rows[0].sum,
+      activeEscrows: activeRes.rows[0].count,
+      completedDeals: completedRes.rows[0].count,
+      disputes: disputesRes.rows[0].count,
+      currency
+    });
+  } catch (error) {
+    console.error('Summary fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction summary' });
+  }
+});
+
+// POST /api/transactions/topup - Sandbox developer wallet topup
+router.post('/topup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { amount = 5000, currency = 'XAF' } = req.body;
+
+    // Credit user wallet balance in wallets
+    await query(
+      `INSERT INTO wallets (user_id, balance, currency, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id) 
+       DO UPDATE SET balance = wallets.balance + EXCLUDED.balance, updated_at = NOW()`,
+      [userId, parseFloat(amount), currency]
+    );
+
+    // Insert completed DEPOSIT transaction
+    const depositId = require('crypto').randomUUID();
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, created_at)
+       VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'COMPLETED', NOW())`,
+      [require('crypto').randomUUID(), userId, depositId, parseFloat(amount), currency]
+    );
+
+    const walletRes = await query('SELECT balance::float as balance FROM wallets WHERE user_id = $1', [userId]);
+    res.json({ balance: walletRes.rows[0].balance, message: 'Top up successful' });
+  } catch (error) {
+    console.error('Sandbox top up error:', error);
+    res.status(500).json({ error: 'Failed to process sandbox top up' });
+  }
+});
+
 module.exports = router;

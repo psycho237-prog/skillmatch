@@ -235,6 +235,7 @@ class ApiService {
     return this.updateUser(userId, { push_token: token });
   }
 
+
   // Wallet
   async getWalletBalance() {
     return this.request('/wallet/balance');
@@ -258,7 +259,7 @@ class ApiService {
     });
   }
 
-  // Transactions
+  // Transactions (Remote)
   async getTransactions() {
     return this.request('/transactions');
   }
@@ -353,6 +354,87 @@ class ApiService {
   async getAdminLogs(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/admin/logs?${query}`);
+  }
+
+  // Escrow
+  async initiateEscrow(serviceId: string, counterpartyId: string, conversationId: string) {
+    return this.request('/escrow/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ serviceId, counterpartyId, conversationId }),
+    });
+  }
+
+  async acceptEscrow(escrowId: string) {
+    return this.request('/escrow/accept', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId }),
+    });
+  }
+
+  async markEscrowDelivered(escrowId: string) {
+    return this.request('/escrow/mark-delivered', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId }),
+    });
+  }
+
+  async confirmEscrow(escrowId: string) {
+    return this.request('/escrow/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId }),
+    });
+  }
+
+  async disputeEscrow(escrowId: string, hasProof: boolean, proofUrl?: string) {
+    return this.request('/escrow/dispute', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId, hasProof, proofUrl }),
+    });
+  }
+
+  async getEscrowStatus(escrowId: string) {
+    return this.request(`/escrow/${escrowId}/status`);
+  }
+
+  // Ratings
+  async submitRating(escrowId: string, revieweeId: string, score: number, comment?: string) {
+    return this.request('/ratings', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId, revieweeId, score, comment }),
+    });
+  }
+
+  async getUserRatings(userId: string, page = 1, limit = 20) {
+    return this.request(`/ratings/${userId}?page=${page}&limit=${limit}`);
+  }
+
+  // Transactions (Local History)
+  async getTransactionHistory(page = 1, limit = 20, type = 'ALL') {
+    return this.request(`/transactions/history?page=${page}&limit=${limit}&type=${type}`);
+  }
+
+  async getTransactionSummary() {
+    return this.request('/transactions/summary');
+  }
+
+  // Readiness Checklist
+  async getUserReadiness(userId: string) {
+    return this.request(`/users/${userId}/readiness`);
+  }
+
+  async topUpWallet(amount: number, currency = 'XAF') {
+    return this.request('/transactions/topup', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currency }),
+    });
+  }
+
+  async getConversationDetail(conversationId: string) {
+    return this.request(`/chat/conversations/detail/${conversationId}`);
+  }
+
+  async getActiveEscrow(conversationId: string) {
+    return this.request(`/escrow/active/${conversationId}`);
   }
 }
 

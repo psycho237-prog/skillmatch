@@ -47,8 +47,8 @@ async function seed() {
       'New York, NY', 
       true, 
       1, 
-      4.9, 
-      24, 
+      0, 
+      0, 
       ['/home/darkvador/Desktop/skillmatch/frontend/assets/images/japan.png']
     ]
   );
@@ -66,8 +66,8 @@ async function seed() {
       'Chicago, IL', 
       true, 
       1, 
-      4.7, 
-      12, 
+      0, 
+      0, 
       ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
     ]
   );
@@ -85,8 +85,8 @@ async function seed() {
       'Remote', 
       true, 
       0, 
-      5.0, 
-      38, 
+      0, 
+      0, 
       ['/media/darkvador/WINDOWS/Users/ABRE BRIDGE/Pictures/SCHOOL/Real Scout - Real-Estate App.fig/images/1e2d4b8fba4f0caa7158c7589ed459e8f4c52d34']
     ]
   );

@@ -35,6 +35,8 @@ export default function PostService() {
   const [currency, setCurrency] = useState('USD');
   const [barterSkill, setBarterSkill] = useState('');
   const [imageUris, setImageUris] = useState<string[]>([]);
+  const [serviceType, setServiceType] = useState<'SKILL_TO_CASH' | 'SKILL_TO_SKILL'>('SKILL_TO_CASH');
+  const [holdupAmount, setHoldupAmount] = useState('');
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -71,6 +73,17 @@ export default function PostService() {
       return;
     }
 
+    if (!serviceType) {
+      showAlert(t('error'), 'Please select a service type.');
+      return;
+    }
+
+    const parsedHold = parseFloat(holdupAmount);
+    if (isNaN(parsedHold) || parsedHold <= 0) {
+      showAlert(t('error'), 'Holdup amount must be a number greater than 0.');
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -92,7 +105,9 @@ export default function PostService() {
         currency,
         barter_skill: priceType === 'exchange' ? barterSkill : null,
         location,
-        images: uploadedUrls
+        images: uploadedUrls,
+        service_type: serviceType,
+        holdup_amount: parsedHold
       });
       
       showAlert(t('success'), t('post_success'), [
@@ -176,20 +191,34 @@ export default function PostService() {
             />
           </View>
 
-          <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>{t('price_type_label')}</Typography>
+          <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>Escrow Model Type</Typography>
           <View style={styles.typeContainer}>
-            {PRICE_TYPES.map(type => (
+            {(['SKILL_TO_CASH', 'SKILL_TO_SKILL'] as const).map(type => (
               <TouchableOpacity
                 key={type}
                 style={[
                   styles.typeChip,
-                  { backgroundColor: priceType === type ? colors.primary : colors.card, borderColor: colors.border }
+                  { backgroundColor: serviceType === type ? colors.primary : colors.card, borderColor: colors.border }
                 ]}
-                onPress={() => setPriceType(type)}
+                onPress={() => setServiceType(type)}
               >
-                <Typography variant="body2" color={priceType === type ? 'white' : colors.black1}>{t(type as any)}</Typography>
+                <Typography variant="body2" color={serviceType === type ? 'white' : colors.black1}>
+                  {type === 'SKILL_TO_CASH' ? 'Skill-to-Cash' : 'Skill-to-Skill'}
+                </Typography>
               </TouchableOpacity>
             ))}
+          </View>
+
+          <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>Holdup Amount (Commitment Hold)</Typography>
+          <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TextInput
+              placeholder="e.g. 500"
+              placeholderTextColor={colors.black3}
+              keyboardType="numeric"
+              style={[styles.input, { color: colors.black1 }]}
+              value={holdupAmount}
+              onChangeText={setHoldupAmount}
+            />
           </View>
 
           {priceType !== 'exchange' ? (

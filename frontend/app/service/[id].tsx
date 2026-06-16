@@ -229,12 +229,26 @@ export default function ServiceDetail() {
             </Typography>
           </TouchableOpacity>
 
-          <View style={styles.section}>
-             <Typography variant="h5" style={styles.sectionTitle}>{t('description')}</Typography>
-             <Typography variant="body1" color={colors.black2} style={{ lineHeight: 28 }}>
-                {service.description}
-             </Typography>
-          </View>
+           <View style={styles.section}>
+              <Typography variant="h5" style={styles.sectionTitle}>{t('description')}</Typography>
+              <Typography variant="body1" color={colors.black2} style={{ lineHeight: 28 }}>
+                 {service.description}
+              </Typography>
+           </View>
+
+           {service.service_type && (
+             <View style={styles.section}>
+               <Typography variant="h5" style={styles.sectionTitle}>Escrow Settings</Typography>
+               <View style={[styles.barterBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                 <Typography variant="body1" color={colors.black1} style={{ marginBottom: 4 }}>
+                   <Typography weight="bold">Type:</Typography> {service.service_type === 'SKILL_TO_CASH' ? 'Skill-to-Cash' : 'Skill-to-Skill'}
+                 </Typography>
+                 <Typography variant="body1" color={colors.black1}>
+                   <Typography weight="bold">Commitment Hold:</Typography> {service.holdup_amount} {service.currency || 'XAF'}
+                 </Typography>
+               </View>
+             </View>
+           )}
 
           {service.price_type === 'exchange' && service.barter_skill && (
             <View style={styles.section}>
@@ -272,12 +286,46 @@ export default function ServiceDetail() {
           <Typography variant="caption" color={colors.black3}>{t('price')}</Typography>
           <Typography variant="h2" color={colors.primary} numberOfLines={1}>{formatPrice()}</Typography>
         </View>
-        <Button 
-          title={t('contact_now')} 
-          onPress={handleContact} 
-          style={styles.bookBtn}
-          loading={loading}
-        />
+        {user?.id === service.user_id || user?.id === service.users?.id ? (
+          <Button 
+            title="Delete Service" 
+            onPress={async () => {
+              Alert.alert(
+                "Delete Service",
+                `Are you sure you want to delete "${service.title}"?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        setLoading(true);
+                        await api.deleteService(service.id);
+                        showAlert("Success", "Service deleted successfully.");
+                        router.back();
+                      } catch (err: any) {
+                        console.error(err);
+                        showAlert("Error", err.message || "Failed to delete service.");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }
+                ]
+              );
+            }} 
+            style={[styles.bookBtn, { backgroundColor: colors.danger }]}
+            loading={loading}
+          />
+        ) : (
+          <Button 
+            title={t('contact_now')} 
+            onPress={handleContact} 
+            style={styles.bookBtn}
+            loading={loading}
+          />
+        )}
       </View>
     </View>
   );

@@ -12,11 +12,14 @@ const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
 const uploadRoutes = require('./routes/upload');
 const walletRoutes = require('./routes/wallet');
-const transactionsRoutes = require('./routes/transactions');
 const adminRoutes = require('./routes/admin');
+const escrowRoutes = require('./routes/escrow').router;
 const webhookRoutes = require('./routes/webhooks');
+const ratingsRoutes = require('./routes/ratings');
+const transactionsRoutes = require('./routes/transactions');
 const { setupChatSocket } = require('./sockets/chat');
 const { initBaileys } = require('./config/whatsapp');
+const { startCronScheduler } = require('./services/cron');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +30,8 @@ const io = new Server(server, {
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   },
 });
+
+app.set('io', io);
 
 // Middleware
 app.use(cors());
@@ -44,8 +49,11 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/transactions', transactionsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/escrow', escrowRoutes);
+app.use('/api/ratings', ratingsRoutes);
+app.use('/api/transactions', transactionsRoutes);
+app.use('/webhooks', webhookRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
 // Health check
@@ -65,6 +73,7 @@ server.listen(PORT, HOST, async () => {
   } catch (err) {
     console.error('❌ Failed to initialize Baileys:', err);
   }
+  startCronScheduler();
 });
 
 module.exports = { app, server, io };

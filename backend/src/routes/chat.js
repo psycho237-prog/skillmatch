@@ -49,6 +49,33 @@ router.get('/conversations/:userId', async (req, res) => {
   }
 });
 
+// GET /api/chat/conversations/detail/:conversationId - Get single conversation detail with service details
+router.get('/conversations/detail/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { rows } = await query(
+      `SELECT c.*, 
+              s.id as service_id, s.title as service_title, s.price as service_price, s.service_type, s.holdup_amount, s.currency, s.user_id as service_owner_id,
+              u1.display_name as user1_name, u2.display_name as user2_name
+       FROM conversations c
+       LEFT JOIN services s ON c.service_id = s.id
+       JOIN users u1 ON c.user1_id = u1.id
+       JOIN users u2 ON c.user2_id = u2.id
+       WHERE c.id = $1`,
+      [conversationId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    res.json({ conversation: rows[0] });
+  } catch (error) {
+    console.error('Conversation detail fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch conversation details' });
+  }
+});
+
 // GET /api/chat/messages/:conversationId - Get messages for a conversation
 router.get('/messages/:conversationId', async (req, res) => {
   try {
