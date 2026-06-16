@@ -532,6 +532,19 @@ async function runMigrations() {
       ON CONFLICT DO NOTHING
     `);
 
+    // 24. Create default superadmin account
+    await client.query(`
+      INSERT INTO users (phone_number, password_hash, display_name, role, status)
+      VALUES (
+        '237000000000', 
+        crypt('admin123', gen_salt('bf')), 
+        'Super Admin', 
+        'superadmin', 
+        'active'
+      )
+      ON CONFLICT (phone_number) DO NOTHING
+    `);
+
     console.log('✅ Database migrations executed successfully.');
   } catch (error) {
     console.error('❌ Database migration error:', error);
