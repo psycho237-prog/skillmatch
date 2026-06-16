@@ -17,7 +17,7 @@ import { icons } from '../../src/constants';
 import { api, resolveImageUrl } from '../../src/services/api';
 
 export default function Home() {
-  const { colors, t, user } = useApp();
+  const { colors, t, user, notifications } = useApp();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -106,8 +106,18 @@ export default function Home() {
               <Typography variant="h5" color={colors.black1}>{user?.display_name || 'Guest'}</Typography>
             </View>
           </View>
-          <TouchableOpacity style={[styles.bellBtn, { borderColor: colors.border }]}>
+          <TouchableOpacity 
+            style={[styles.bellBtn, { borderColor: colors.border }]}
+            onPress={() => router.push('/notifications')}
+          >
             <Image source={icons.bell} style={[styles.bellIcon, { tintColor: colors.black1 }]} />
+            {notifications.filter(n => !n.read).length > 0 && (
+              <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+                <Typography variant="caption" color="white" weight="bold" style={styles.badgeText}>
+                  {notifications.filter(n => !n.read).length}
+                </Typography>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -262,6 +272,21 @@ const styles = StyleSheet.create({
   bellIcon: {
     width: 24,
     height: 24,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 9,
+    lineHeight: 12,
   },
   searchRow: {
     flexDirection: 'row',

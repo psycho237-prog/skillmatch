@@ -47,7 +47,6 @@ INSERT INTO public.users VALUES ('74a5f1e8-d4b6-4017-8563-5352978515f8', '123456
 INSERT INTO public.users VALUES ('90e3d6d9-cd47-4c89-adc9-d6ebc9997089', '0987654321', '$2a$10$PX1FlekMHyZesAKdFHZ9LeC9KoPeF6MMq.y6/If5La4GAUdbmRbUy', 'Bob Builder', NULL, true, 'en', 'system', '2026-06-10 18:54:18.22476-04', '2026-06-10 18:54:18.22476-04', '2026-06-10 18:54:18.22476-04', NULL);
 INSERT INTO public.users VALUES ('2677d30a-87b3-456d-ac1e-6017aee191a6', '5555555555', '$2a$10$PX1FlekMHyZesAKdFHZ9LeC9KoPeF6MMq.y6/If5La4GAUdbmRbUy', 'Charlie Design', NULL, true, 'en', 'system', '2026-06-10 18:54:18.235992-04', '2026-06-10 18:54:18.235992-04', '2026-06-10 18:54:18.235992-04', NULL);
 INSERT INTO public.users VALUES ('2ffe26d4-9c1e-442b-b526-c536d0863adf', '123456789', '$2a$10$M9Yx0TIfinDC96tIvw0yyetr3VW2cIbJ4JtJw/rrmHCNvdxg7.cV6', 'PC USER', '/uploads/file-1781354448968-275004212', true, 'en', 'system', '2026-06-12 21:26:52.889345-04', '2026-06-13 08:40:49.123479-04', '2026-06-12 22:56:00.190665-04', NULL);
-INSERT INTO public.users VALUES ('12e322fd-df36-47bf-94fd-33863470d3de', '654121864', '$2a$10$KuZ9rhzk2Y0ph2EmOIO2m.XSvykzRFmVTXbPkJzhjnHHIQPdkZpmO', 'ABRE BRIDGE', '/uploads/file-1781483274408-803082574', true, 'en', 'system', '2026-06-12 21:48:43.746859-04', '2026-06-14 20:27:54.496073-04', '2026-06-14 20:27:41.077724-04', NULL);
 
 
 --
@@ -64,9 +63,7 @@ INSERT INTO public.services VALUES ('d82ba98d-4380-44f3-ae75-589c262bff25', '2ff
 -- Data for Name: conversations; Type: TABLE DATA; Schema: public; Owner: skillmatch_user
 --
 
-INSERT INTO public.conversations VALUES ('66c1c1b4-b1dd-48d5-aa9f-2d08208b6375', '12e322fd-df36-47bf-94fd-33863470d3de', '2ffe26d4-9c1e-442b-b526-c536d0863adf', '8cc97c3d-c7d9-4192-b64d-77041f0c06f4', '2026-06-12 21:49:01.55647-04', '2026-06-12 22:10:04.299389-04');
 INSERT INTO public.conversations VALUES ('54a15201-cfe0-403b-97ff-ac547ae5c577', '262ed9de-607a-4261-93de-3d3019283386', '2ffe26d4-9c1e-442b-b526-c536d0863adf', '8cc97c3d-c7d9-4192-b64d-77041f0c06f4', '2026-06-12 22:18:48.038445-04', '2026-06-12 22:18:50.797598-04');
-INSERT INTO public.conversations VALUES ('8cff7514-e23b-4e8e-95ee-1ecfb058dec0', '12e322fd-df36-47bf-94fd-33863470d3de', '262ed9de-607a-4261-93de-3d3019283386', 'adb0224e-d60a-4ca0-87a9-86d2c841fa98', '2026-06-12 22:20:15.257763-04', '2026-06-12 22:20:17.415042-04');
 INSERT INTO public.conversations VALUES ('08c531c2-7058-4127-8e44-74d4e147d6da', '2ffe26d4-9c1e-442b-b526-c536d0863adf', '2ffe26d4-9c1e-442b-b526-c536d0863adf', 'd82ba98d-4380-44f3-ae75-589c262bff25', '2026-06-13 08:44:38.851288-04', '2026-06-13 08:45:19.208908-04');
 
 
@@ -77,18 +74,13 @@ INSERT INTO public.conversations VALUES ('08c531c2-7058-4127-8e44-74d4e147d6da',
 INSERT INTO public.favorites VALUES ('2edf57a8-aae1-4870-a820-ae6de83150eb', '2ffe26d4-9c1e-442b-b526-c536d0863adf', '8cc97c3d-c7d9-4192-b64d-77041f0c06f4', '2026-06-13 07:19:22.25134-04');
 INSERT INTO public.favorites VALUES ('98f99b3b-3ac7-4213-a789-8dc4ac17fd55', '2ffe26d4-9c1e-442b-b526-c536d0863adf', 'adb0224e-d60a-4ca0-87a9-86d2c841fa98', '2026-06-13 08:44:15.314231-04');
 INSERT INTO public.favorites VALUES ('58e18ccc-403a-4c03-80c8-bc1cc08ffe2d', '2ffe26d4-9c1e-442b-b526-c536d0863adf', 'd82ba98d-4380-44f3-ae75-589c262bff25', '2026-06-13 08:44:34.327296-04');
-INSERT INTO public.favorites VALUES ('966c04c2-e621-4648-b88f-e94a228ea36d', '12e322fd-df36-47bf-94fd-33863470d3de', '8cc97c3d-c7d9-4192-b64d-77041f0c06f4', '2026-06-14 20:39:56.094514-04');
-INSERT INTO public.favorites VALUES ('5c75076b-ec0b-4296-8b14-7f3fe2ff5376', '12e322fd-df36-47bf-94fd-33863470d3de', 'adb0224e-d60a-4ca0-87a9-86d2c841fa98', '2026-06-14 20:39:59.865345-04');
 
 
 --
 -- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: skillmatch_user
 --
 
-INSERT INTO public.messages VALUES ('39325661-78ac-4803-92bb-6b2d3b403d4c', '8cff7514-e23b-4e8e-95ee-1ecfb058dec0', '12e322fd-df36-47bf-94fd-33863470d3de', 'gfnhn', false, '2026-06-12 22:20:17.398421-04');
 INSERT INTO public.messages VALUES ('4ab97676-e53e-46c2-bdd5-cca95a31361b', '54a15201-cfe0-403b-97ff-ac547ae5c577', '262ed9de-607a-4261-93de-3d3019283386', 'yjtj', true, '2026-06-12 22:18:50.763749-04');
-INSERT INTO public.messages VALUES ('27456815-bc04-4692-97e5-2f1d7c67e905', '66c1c1b4-b1dd-48d5-aa9f-2d08208b6375', '12e322fd-df36-47bf-94fd-33863470d3de', 'Yo', true, '2026-06-12 21:49:07.847164-04');
-INSERT INTO public.messages VALUES ('096e61ea-a35a-443f-91e4-efba70037237', '66c1c1b4-b1dd-48d5-aa9f-2d08208b6375', '12e322fd-df36-47bf-94fd-33863470d3de', 'hjnu', true, '2026-06-12 22:10:04.258859-04');
 INSERT INTO public.messages VALUES ('3ba86a4d-f636-499d-9c29-cca8a1699ed5', '08c531c2-7058-4127-8e44-74d4e147d6da', '2ffe26d4-9c1e-442b-b526-c536d0863adf', 'fsdgfgghg', false, '2026-06-13 08:45:19.187759-04');
 
 
@@ -97,8 +89,6 @@ INSERT INTO public.messages VALUES ('3ba86a4d-f636-499d-9c29-cca8a1699ed5', '08c
 --
 
 INSERT INTO public.reviews VALUES ('7224c6ce-997b-46fb-a64c-c1f62be18bc3', '8cc97c3d-c7d9-4192-b64d-77041f0c06f4', '2ffe26d4-9c1e-442b-b526-c536d0863adf', 5, '', '2026-06-12 21:31:10.339218-04');
-INSERT INTO public.reviews VALUES ('b5b77183-db58-468d-a2cd-251fe845837d', 'adb0224e-d60a-4ca0-87a9-86d2c841fa98', '12e322fd-df36-47bf-94fd-33863470d3de', 5, '', '2026-06-12 22:20:08.820244-04');
-INSERT INTO public.reviews VALUES ('30c51d81-18d2-4567-ad1d-70fa414753c2', '77b72846-2f03-4411-a68c-8832f9da41f9', '12e322fd-df36-47bf-94fd-33863470d3de', 4, '', '2026-06-14 20:40:20.971554-04');
 
 
 --

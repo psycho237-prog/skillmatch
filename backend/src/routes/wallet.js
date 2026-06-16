@@ -3,6 +3,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { processDeposit, processWithdrawal } = require('../config/wallet');
 const crypto = require('crypto');
+const pawapay = require('../services/pawapay');
 
 const PAWAPAY_TOKEN = process.env.PAWAPAY_API_TOKEN || 'eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzE4NDAzMSwiaWF0IjoxNzgxNTY0ODMxLCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0ZTgwZWU0NS0zNTJkLTRjYzMtOGY4My03MmJkZjViMjkyNjYifQ.8xYbS6zbVuYRi8_FGEmsvmGg-KjxRDbNafk9iu8MxqRytL2s3l3Zk332KLZBidRYIt_fLmo0eOvqGkvsXRG2aQ';
 const PAWAPAY_BASE_URL = 'https://api.sandbox.pawapay.io';
@@ -52,95 +53,73 @@ router.post('/deposit', async (req, res) => {
     const wallet = walletRes.rows[0];
     if (!wallet) return res.status(404).json({ error: 'Wallet not found' });
 
-    // 1. Predict Provider (with mock fallback on auth error)
-    let pred;
+    // 1. Predict Operator details (dynamic currency and correspondent support)
+    const pred = await pawapay.detectCorrespondent(mobile_money_number);
+    const userCurrency = pred.currency || 'XAF';
+    const depositId = crypto.randomUUID();
+
     let fallbackToMock = false;
+    let depositRes;
+
     try {
-      const predRes = await fetch(`${PAWAPAY_BASE_URL}/v2/predict-provider`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: mobile_money_number })
+      // Check if token is unauthorized or if active-conf returns 401
+      const confRes = await fetch(`${PAWAPAY_BASE_URL}/v2/active-conf?country=${pred.country}&operationType=DEPOSIT`, {
+        headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
-      
-      if (predRes.status === 401) {
+      if (confRes.status === 401) {
         fallbackToMock = true;
       } else {
-        pred = await predRes.json();
-        if (pred.failureReason && pred.failureReason.failureCode === 'AUTHENTICATION_ERROR') {
-          fallbackToMock = true;
-        } else if (pred.failureReason) {
-          return res.status(400).json({ error: pred.failureReason.failureMessage });
+        // Call the wrapper
+        depositRes = await pawapay.initiateDeposit(
+          depositId,
+          mobile_money_number,
+          amount,
+          userCurrency,
+          pred.correspondent
+        );
+        if (depositRes.status === 'REJECTED') {
+          return res.status(400).json({ error: depositRes.failureReason?.failureMessage || 'Deposit rejected' });
         }
       }
     } catch (err) {
-      console.warn('⚠️ PawaPay predict-provider error, trying mock fallback:', err.message);
+      console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
       fallbackToMock = true;
     }
 
     if (fallbackToMock) {
-      console.log('⚠️ PawaPay Token Invalid / API Failed. Performing Sandbox Mock Credit.');
-      const depositId = crypto.randomUUID();
-      const provider = mobile_money_number.startsWith('23769') || mobile_money_number.startsWith('237655') ? 'ORANGE' : 'MTN';
-      
+      console.log('⚠️ Performing Sandbox Mock Credit for Wallet.');
       // Credit wallet directly
       await query('UPDATE wallets SET balance = balance + $1 WHERE id = $2', [Number(amount), wallet.id]);
       
-      // Insert completed transaction
+      // Insert completed transaction in wallet_transactions
       await query(`INSERT INTO wallet_transactions (user_id, wallet_id, type, amount, balance_before, balance_after, pending_before, pending_after, status, reference_id, description) VALUES ($1, $2, 'deposit', $3, $4, $5, $6, $7, 'completed', $8, $9)`, 
-        [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) + Number(amount), wallet.pending_balance || 0.00, wallet.pending_balance || 0.00, depositId, `Dépôt Mobile Money (Mock Sandbox ${provider})`]);
+        [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) + Number(amount), wallet.pending_balance || 0.00, wallet.pending_balance || 0.00, depositId, `Dépôt Mobile Money (Mock Sandbox ${pred.correspondent})`]);
+
+      // Insert completed transaction in escrow_transactions
+      await query(
+        `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, created_at)
+         VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'COMPLETED', NOW())`,
+        [crypto.randomUUID(), userId, depositId, Number(amount), userCurrency]
+      );
       
-      return res.json({ message: 'Dépôt Simulé Réussi (Bypass Token)', transaction_id: depositId });
+      return res.json({ message: 'Dépôt Simulé Réussi (Mock Sandbox)', transaction_id: depositId });
     }
 
-    // 2. Discover provider decimal support
-    const confRes = await fetch(`${PAWAPAY_BASE_URL}/v2/active-conf?country=${pred.country}&operationType=DEPOSIT`, {
-      headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
-    });
-    const conf = await confRes.json();
-    let decimalsInAmount = 'NONE';
-    for (const c of conf.countries || []) {
-      for (const p of c.providers || []) {
-        if (p.provider === pred.provider) {
-          const op = p.currencies?.[0]?.operationTypes?.DEPOSIT;
-          if (op) decimalsInAmount = op.decimalsInAmount;
-        }
-      }
-    }
-
-    const formattedAmount = decimalsInAmount === 'TWO_PLACES' ? Number(amount).toFixed(2) : String(Math.floor(Number(amount)));
-
-    // 3. Initiate Deposit
-    const depositId = crypto.randomUUID();
-
-    // Create pending local record
+    // Standard PawaPay flow
+    // Insert pending in wallet_transactions
     await query(`INSERT INTO wallet_transactions (user_id, wallet_id, type, amount, balance_before, balance_after, pending_before, pending_after, status, reference_id, description) VALUES ($1, $2, 'deposit', $3, $4, $5, $6, $7, 'pending', $8, $9)`, 
-      [userId, wallet.id, Number(amount), wallet.balance, wallet.balance, wallet.pending_balance, wallet.pending_balance, depositId, `Dépôt Mobile Money (${pred.provider})`]);
+      [userId, wallet.id, Number(amount), wallet.balance, wallet.balance, wallet.pending_balance, wallet.pending_balance, depositId, `Dépôt Mobile Money (${pred.correspondent})`]);
 
-    const depositRes = await fetch(`${PAWAPAY_BASE_URL}/v2/deposits`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        depositId: depositId,
-        amount: formattedAmount,
-        currency: pred.country === 'CMR' ? 'XAF' : 'XOF',
-        payer: {
-          type: "MMO",
-          accountDetails: { phoneNumber: pred.phoneNumber, provider: pred.provider }
-        },
-        customerMessage: "Swapster Deposit",
-      })
-    });
-    const depositData = await depositRes.json();
+    // Insert pending in escrow_transactions
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, created_at)
+       VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', NOW())`,
+      [crypto.randomUUID(), userId, depositId, Number(amount), userCurrency]
+    );
 
-    if (depositData.status === 'ACCEPTED') {
-      res.json({ message: 'Dépôt initié. Veuillez confirmer sur votre téléphone.', transaction_id: depositId, pawapayData: depositData });
-    } else if (depositData.status === 'REJECTED') {
-      await query(`UPDATE wallet_transactions SET status = 'failed' WHERE reference_id = $1`, [depositId]);
-      res.status(400).json({ error: depositData.failureReason?.failureMessage || 'Dépôt rejeté' });
-    } else {
-      res.json({ message: 'Dépôt en cours...', transaction_id: depositId, status: depositData.status });
-    }
+    res.json({ message: 'Dépôt initié. Veuillez confirmer sur votre téléphone.', transaction_id: depositId });
   } catch (err) {
+    console.error('Wallet deposit error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -162,82 +141,73 @@ router.post('/withdraw', async (req, res) => {
     }
     const wallet = walletRes.rows[0];
 
-    // 1. Predict Provider (with mock fallback on auth error)
-    let pred;
+    // 1. Predict Operator details (dynamic currency and correspondent support)
+    const pred = await pawapay.detectCorrespondent(mobile_money_number);
+    const userCurrency = pred.currency || 'XAF';
+    const payoutId = crypto.randomUUID();
+
     let fallbackToMock = false;
+    let payoutRes;
+
     try {
-      const predRes = await fetch(`${PAWAPAY_BASE_URL}/v2/predict-provider`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: mobile_money_number })
+      const confRes = await fetch(`${PAWAPAY_BASE_URL}/v2/active-conf?country=${pred.country}&operationType=PAYOUT`, {
+        headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
-      
-      if (predRes.status === 401) {
+      if (confRes.status === 401) {
         fallbackToMock = true;
       } else {
-        pred = await predRes.json();
-        if (pred.failureReason && pred.failureReason.failureCode === 'AUTHENTICATION_ERROR') {
-          fallbackToMock = true;
-        } else if (pred.failureReason) {
-          return res.status(400).json({ error: pred.failureReason.failureMessage });
+        // Call the wrapper
+        payoutRes = await pawapay.initiatePayout(
+          payoutId,
+          mobile_money_number,
+          amount,
+          userCurrency,
+          pred.correspondent
+        );
+        if (payoutRes.status === 'REJECTED') {
+          return res.status(400).json({ error: payoutRes.failureReason?.failureMessage || 'Withdrawal rejected' });
         }
       }
     } catch (err) {
-      console.warn('⚠️ PawaPay predict-provider error, trying mock fallback:', err.message);
+      console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
       fallbackToMock = true;
     }
 
     if (fallbackToMock) {
-      console.log('⚠️ PawaPay Token Invalid / API Failed. Performing Sandbox Mock Debit.');
-      const payoutId = crypto.randomUUID();
-      const provider = mobile_money_number.startsWith('23769') || mobile_money_number.startsWith('237655') ? 'ORANGE' : 'MTN';
-      
+      console.log('⚠️ Performing Sandbox Mock Debit for Wallet.');
       // Debit wallet directly
       await query('UPDATE wallets SET balance = balance - $1 WHERE id = $2', [Number(amount), wallet.id]);
       
-      // Insert completed transaction
+      // Insert completed transaction in wallet_transactions
       await query(`INSERT INTO wallet_transactions (user_id, wallet_id, type, amount, balance_before, balance_after, pending_before, pending_after, status, reference_id, description) VALUES ($1, $2, 'withdrawal', $3, $4, $5, $6, $7, 'completed', $8, $9)`, 
-        [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) - Number(amount), wallet.pending_balance || 0.00, wallet.pending_balance || 0.00, payoutId, `Retrait Mobile Money (Mock Sandbox ${provider})`]);
+        [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) - Number(amount), wallet.pending_balance || 0.00, wallet.pending_balance || 0.00, payoutId, `Retrait Mobile Money (Mock Sandbox ${pred.correspondent})`]);
+
+      // Insert completed transaction in escrow_transactions
+      await query(
+        `INSERT INTO escrow_transactions (id, user_id, type, pawapay_payout_id, amount, currency, status, created_at)
+         VALUES ($1, $2, 'PAYOUT', $3, $4, $5, 'COMPLETED', NOW())`,
+        [crypto.randomUUID(), userId, payoutId, Number(amount), userCurrency]
+      );
       
-      return res.json({ message: 'Retrait Simulé Réussi (Bypass Token)', transaction_id: payoutId });
+      return res.json({ message: 'Retrait Simulé Réussi (Mock Sandbox)', transaction_id: payoutId });
     }
 
-    const formattedAmount = String(Math.floor(Number(amount)));
-
-    // 2. Initiate Payout
-    const payoutId = crypto.randomUUID();
-
+    // Standard PawaPay flow
     // Lock funds immediately
     await query(`UPDATE wallets SET balance = balance - $1, pending_balance = pending_balance + $1 WHERE id = $2`, [Number(amount), wallet.id]);
+
+    // Insert pending in wallet_transactions
     await query(`INSERT INTO wallet_transactions (user_id, wallet_id, type, amount, balance_before, balance_after, pending_before, pending_after, status, reference_id, description) VALUES ($1, $2, 'withdrawal', $3, $4, $5, $6, $7, 'pending', $8, $9)`, 
-      [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) - Number(amount), wallet.pending_balance, Number(wallet.pending_balance) + Number(amount), payoutId, `Retrait Mobile Money (${pred.provider})`]);
+      [userId, wallet.id, Number(amount), wallet.balance, Number(wallet.balance) - Number(amount), wallet.pending_balance, Number(wallet.pending_balance) + Number(amount), payoutId, `Retrait Mobile Money (${pred.correspondent})`]);
 
-    const payoutRes = await fetch(`${PAWAPAY_BASE_URL}/v2/payouts`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        payoutId: payoutId,
-        amount: formattedAmount,
-        currency: pred.country === 'CMR' ? 'XAF' : 'XOF',
-        recipient: {
-          type: "MMO",
-          recipientDetails: { phoneNumber: pred.phoneNumber, provider: pred.provider }
-        },
-        customerMessage: "Swapster Withdraw",
-      })
-    });
-    const payoutData = await payoutRes.json();
+    // Insert pending in escrow_transactions
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, pawapay_payout_id, amount, currency, status, created_at)
+       VALUES ($1, $2, 'PAYOUT', $3, $4, $5, 'PENDING', NOW())`,
+      [crypto.randomUUID(), userId, payoutId, Number(amount), userCurrency]
+    );
 
-    if (payoutData.status === 'ACCEPTED' || payoutData.status === 'ENQUEUED') {
-      res.json({ message: 'Retrait initié avec succès.', transaction_id: payoutId, pawapayData: payoutData });
-    } else if (payoutData.status === 'REJECTED') {
-      // Revert funds
-      await query(`UPDATE wallets SET balance = balance + $1, pending_balance = pending_balance - $1 WHERE id = $2`, [Number(amount), wallet.id]);
-      await query(`UPDATE wallet_transactions SET status = 'failed' WHERE reference_id = $1`, [payoutId]);
-      res.status(400).json({ error: payoutData.failureReason?.failureMessage || 'Retrait rejeté' });
-    } else {
-      res.json({ message: 'Retrait en cours...', transaction_id: payoutId, status: payoutData.status });
-    }
+    res.json({ message: 'Retrait initié avec succès.', transaction_id: payoutId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

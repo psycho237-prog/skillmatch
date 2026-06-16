@@ -5,6 +5,7 @@ import { translations, Language, TranslationKey } from '../i18n/translations';
 import { Colors, ThemeName, ColorScheme } from '../constants/Colors';
 import { registerForPushNotificationsAsync, setupNotificationHandlers } from '../services/notifications';
 import { api } from '../services/api';
+import { socketService } from '../services/socket';
 
 interface User {
   id: string;
@@ -15,6 +16,15 @@ interface User {
   language: string;
   theme: string;
   role?: string;
+  currency?: string | null;
+}
+
+export interface StoredNotification {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
 }
 
 interface AppContextType {
@@ -39,6 +49,12 @@ interface AppContextType {
   // Notifications
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+  notifications: StoredNotification[];
+  clearNotifications: () => Promise<void>;
+  removeNotification: (id: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  addNotification: (title: string, body: string) => Promise<void>;
 
   initialized: boolean;
 }
@@ -60,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [themePreference, setThemePrefState] = useState<'system' | 'light' | 'dark'>('system');
   const [language, setLangState] = useState<Language>('en');
   const [notificationsEnabled, setNotifState] = useState(true);
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [initialized, setInitialized] = useState(false);
 
   // Load settings from storage on mount
@@ -74,14 +91,114 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [user, initialized, notificationsEnabled]);
 
+  // Global Socket Listener & Connection Management
+  useEffect(() => {
+    if (user) {
+      socketService.connect(user.id);
+
+      const handleSocketNotification = (data: any) => {
+        console.log('[SOCKET NOTIFICATION RECEIVED]', data);
+        let title = 'Notification';
+        let body = '';
+        if (data.title && data.body) {
+          title = data.title;
+          body = data.body;
+        } else if (data.event) {
+          const event = data.event;
+          if (event === 'BOTH_LOCKED') {
+            title = 'Escrow Locked 🔒';
+            body = 'Funds have been locked in escrow. Work can begin!';
+          } else if (event === 'PROVIDER_MARKED_DONE') {
+            title = 'Service Delivered 📦';
+            body = 'The provider has marked the service as delivered. Please review and confirm.';
+          } else if (event === 'COMPLETED') {
+            title = 'Transaction Complete ✅';
+            body = 'Receipt confirmed. Funds have been released.';
+          } else if (event === 'DISPUTED') {
+            title = 'Dispute Opened ⚠️';
+            body = 'A dispute has been opened for this transaction.';
+          } else if (event === 'CANCELLED') {
+            title = 'Transaction Cancelled ❌';
+            body = 'The transaction has been cancelled.';
+          } else {
+            title = event.replace(/_/g, ' ');
+            body = 'Escrow status updated.';
+          }
+        }
+        addNotification(title, body);
+      };
+
+      socketService.on(`user_notification_${user.id}`, handleSocketNotification);
+
+      return () => {
+        socketService.off(`user_notification_${user.id}`, handleSocketNotification);
+      };
+    } else {
+      socketService.disconnect();
+    }
+  }, [user]);
+
+  const addNotification = async (title: string, body: string) => {
+    const newNotif: StoredNotification = {
+      id: Math.random().toString(36).substring(2, 11),
+      title,
+      body,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    setNotifications(prev => {
+      const updated = [newNotif, ...prev];
+      AsyncStorage.setItem('@skillmatch_notifications_list', JSON.stringify(updated)).catch(err => {
+        console.error('AsyncStorage notification error:', err);
+      });
+      return updated;
+    });
+  };
+
+  const markNotificationRead = async (id: string) => {
+    setNotifications(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+      AsyncStorage.setItem('@skillmatch_notifications_list', JSON.stringify(updated)).catch(err => {
+        console.error('AsyncStorage notification error:', err);
+      });
+      return updated;
+    });
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      AsyncStorage.setItem('@skillmatch_notifications_list', JSON.stringify(updated)).catch(err => {
+        console.error('AsyncStorage notification error:', err);
+      });
+      return updated;
+    });
+  };
+
+  const removeNotification = async (id: string) => {
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.id !== id);
+      AsyncStorage.setItem('@skillmatch_notifications_list', JSON.stringify(updated)).catch(err => {
+        console.error('AsyncStorage notification error:', err);
+      });
+      return updated;
+    });
+  };
+
+  const clearNotifications = async () => {
+    setNotifications([]);
+    await AsyncStorage.removeItem('@skillmatch_notifications_list');
+  };
+
   const loadSettings = async () => {
     try {
-      const [storedUser, storedToken, storedTheme, storedLang, storedNotif] = await Promise.all([
+      const [storedUser, storedToken, storedTheme, storedLang, storedNotif, storedNotifList] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USER),
         AsyncStorage.getItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
         AsyncStorage.getItem(STORAGE_KEYS.NOTIFICATIONS),
+        AsyncStorage.getItem('@skillmatch_notifications_list'),
       ]);
 
       if (storedUser) setUserState(JSON.parse(storedUser));
@@ -89,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (storedTheme) setThemePrefState(storedTheme as 'system' | 'light' | 'dark');
       if (storedLang) setLangState(storedLang as Language);
       if (storedNotif !== null) setNotifState(storedNotif === 'true');
+      if (storedNotifList) setNotifications(JSON.parse(storedNotifList));
 
       setInitialized(true);
     } catch (e) {
@@ -204,6 +322,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         t,
         notificationsEnabled,
         setNotificationsEnabled,
+        notifications,
+        clearNotifications,
+        removeNotification,
+        markNotificationRead,
+        markAllNotificationsAsRead,
+        addNotification,
         initialized,
       }}
     >

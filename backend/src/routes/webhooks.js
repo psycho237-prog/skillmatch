@@ -43,6 +43,11 @@ router.post('/mobile-money/callback', async (req, res) => {
           "UPDATE wallet_transactions SET status = 'completed' WHERE id = $1", 
           [txn.id]
         );
+        // Mark transaction as completed in escrow_transactions
+        await query(
+          "UPDATE escrow_transactions SET status = 'COMPLETED' WHERE pawapay_deposit_id = $1",
+          [txn.reference_id]
+        );
         // Send Notification
         await sendPushNotification(
           txn.user_id,
@@ -50,6 +55,11 @@ router.post('/mobile-money/callback', async (req, res) => {
           `Votre compte a été crédité de ${txn.amount} FCFA.`,
           { transactionId: txn.id, type: 'deposit' }
         );
+        // Socket notify
+        notifyUsers(req, [txn.user_id], 'WALLET_DEPOSIT_SUCCESS', {
+          title: 'Deposit Successful 🎉',
+          body: `Your wallet was credited with ${txn.amount} ${txn.currency || 'FCFA'}.`
+        });
       } else if (txn.type === 'withdrawal') {
         // Withdrawal completed: remove from pending_balance
         await query(
@@ -61,6 +71,11 @@ router.post('/mobile-money/callback', async (req, res) => {
           "UPDATE wallet_transactions SET status = 'completed' WHERE id = $1", 
           [txn.id]
         );
+        // Mark transaction as completed in escrow_transactions
+        await query(
+          "UPDATE escrow_transactions SET status = 'COMPLETED' WHERE pawapay_payout_id = $1",
+          [txn.reference_id]
+        );
         // Send Notification
         await sendPushNotification(
           txn.user_id,
@@ -68,6 +83,11 @@ router.post('/mobile-money/callback', async (req, res) => {
           `Votre retrait de ${txn.amount} FCFA a été traité vers votre compte mobile money.`,
           { transactionId: txn.id, type: 'withdrawal' }
         );
+        // Socket notify
+        notifyUsers(req, [txn.user_id], 'WALLET_WITHDRAWAL_SUCCESS', {
+          title: 'Withdrawal Processed 💸',
+          body: `Your withdrawal of ${txn.amount} ${txn.currency || 'FCFA'} was processed.`
+        });
       }
     } else if (status === 'FAILED') {
       if (txn.type === 'withdrawal') {
@@ -82,6 +102,11 @@ router.post('/mobile-money/callback', async (req, res) => {
         "UPDATE wallet_transactions SET status = 'failed', description = $1 WHERE id = $2", 
         [`${txn.description} - Echec: ${payload.failureReason?.failureMessage || 'Inconnu'}`, txn.id]
       );
+      // Mark transaction as failed in escrow_transactions
+      await query(
+        "UPDATE escrow_transactions SET status = 'FAILED' WHERE pawapay_deposit_id = $1 OR pawapay_payout_id = $1",
+        [txn.reference_id]
+      );
       // Send Notification
       const verb = txn.type === 'deposit' ? 'Dépôt' : 'Retrait';
       await sendPushNotification(
@@ -90,6 +115,12 @@ router.post('/mobile-money/callback', async (req, res) => {
         `Votre transaction de ${txn.amount} FCFA n'a pas pu aboutir. Raison: ${payload.failureReason?.failureMessage || 'Inconnue'}.`,
         { transactionId: txn.id, type: txn.type }
       );
+      // Socket notify
+      const socketVerb = txn.type === 'deposit' ? 'Deposit' : 'Withdrawal';
+      notifyUsers(req, [txn.user_id], 'WALLET_TX_FAILED', {
+        title: `${socketVerb} Failed ⚠️`,
+        body: `Your transaction of ${txn.amount} ${txn.currency || 'FCFA'} failed. Reason: ${payload.failureReason?.failureMessage || 'Unknown'}.`
+      });
     } else if (status === 'PROCESSING') {
         // In case of Wave REDIRECT_AUTH, just acknowledge.
     }

@@ -10,6 +10,9 @@ import {
   Modal,
   TextInput,
   Image,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../src/contexts/AppContext';
@@ -102,7 +105,7 @@ export default function WalletScreen() {
         </View>
         <View style={styles.historyRight}>
           <Text style={[styles.historyAmount, { color: amountColor }]}>
-            {sign}{Number(item.amount).toLocaleString()} {balance?.currency || 'XAF'}
+            {sign}{Number(item.amount).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
           </Text>
           {item.status === 'pending' && (
             <Text style={[styles.historyStatus, { color: colors.warning }]}>Pending</Text>
@@ -130,14 +133,14 @@ export default function WalletScreen() {
       <View style={[styles.card, { backgroundColor: colors.primary }]}>
         <Text style={styles.cardLabel}>Available Balance</Text>
         <Text style={styles.cardBalance}>
-          {Number(balance?.balance || 0).toLocaleString()} {balance?.currency || 'XAF'}
+          {Number(balance?.balance || 0).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
         </Text>
         
         {Number(balance?.pending_balance) > 0 && (
           <View style={styles.pendingContainer}>
             <Text style={styles.pendingLabel}>Pending (Escrow):</Text>
             <Text style={styles.pendingAmount}>
-              {Number(balance?.pending_balance).toLocaleString()} {balance?.currency || 'XAF'}
+              {Number(balance?.pending_balance).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
             </Text>
           </View>
         )}
@@ -191,68 +194,77 @@ export default function WalletScreen() {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.black1 }]}>
-              {modalType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: colors.black2 }]}>
-              Via Mobile Money (Sandbox)
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.black1 }]}>
+                {modalType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: colors.black2 }]}>
+                Via Mobile Money (Sandbox)
+              </Text>
 
-             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.black1 }]}>Amount ({balance?.currency || 'XAF'})</Text>
-              <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.black1 }]}
-                  keyboardType="numeric"
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0"
-                  placeholderTextColor={colors.black2}
-                />
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.black1 }]}>Amount ({user?.currency || balance?.currency || 'XAF'})</Text>
+                <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
+                  <TextInput
+                    style={[styles.input, { color: colors.black1 }]}
+                    keyboardType="numeric"
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholder="0"
+                    placeholderTextColor={colors.black2}
+                  />
+                </View>
+              </View>
+   
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
+                <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
+                  <TextInput
+                    style={[styles.input, { color: colors.black1 }]}
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="+237..."
+                    placeholderTextColor={colors.black2}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: colors.border }]}
+                  onPress={() => setModalVisible(false)}
+                  disabled={processing}
+                >
+                  <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleTransaction}
+                  disabled={processing}
+                >
+                  {processing ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontFamily: 'Rubik-Medium' }}>
+                      {modalType === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdrawal'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
- 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
-              <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.black1 }]}
-                  keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+237..."
-                  placeholderTextColor={colors.black2}
-                />
-              </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, { backgroundColor: colors.border }]}
-                onPress={() => setModalVisible(false)}
-                disabled={processing}
-              >
-                <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                onPress={handleTransaction}
-                disabled={processing}
-              >
-                {processing ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={{ color: '#fff', fontFamily: 'Rubik-Medium' }}>
-                    {modalType === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdrawal'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

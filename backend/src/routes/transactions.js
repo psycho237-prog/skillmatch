@@ -380,7 +380,7 @@ router.get('/summary', async (req, res) => {
     const earnedRes = await query(
       `SELECT COALESCE(SUM(amount), 0)::float as sum 
        FROM escrow_transactions 
-       WHERE user_id = $1 AND type = 'PAYOUT' AND status = 'COMPLETED'`,
+       WHERE user_id = $1 AND type = 'PAYOUT' AND status = 'COMPLETED' AND escrow_id IS NOT NULL`,
       [userId]
     );
 
@@ -388,7 +388,7 @@ router.get('/summary', async (req, res) => {
     const spentRes = await query(
       `SELECT COALESCE(SUM(amount), 0)::float as sum 
        FROM escrow_transactions 
-       WHERE user_id = $1 AND type = 'DEPOSIT' AND status = 'COMPLETED'`,
+       WHERE user_id = $1 AND type = 'DEPOSIT' AND status = 'COMPLETED' AND escrow_id IS NOT NULL`,
       [userId]
     );
 
