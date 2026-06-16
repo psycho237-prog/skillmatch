@@ -195,9 +195,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid phone number or password' });
     }
 
-    // Update last login
     const updatedUserRes = await query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1 RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme',
+      'UPDATE users SET last_login = NOW() WHERE id = $1 RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme, role, status',
       [user.id]
     );
 
