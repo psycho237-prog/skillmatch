@@ -1,7 +1,6 @@
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
-  makeInMemoryStore,
   fetchLatestBaileysVersion,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
@@ -13,9 +12,6 @@ dotenv.config();
 
 const STORE_PATH = process.env.BAILEYS_STORE_PATH || './baileys_store';
 const AUTH_INFO_PATH = path.join(STORE_PATH, 'auth_info_multi');
-
-const store = makeInMemoryStore({});
-
 let sock: ReturnType<typeof makeWASocket> | null = null;
 
 function clearAuthInfo() {
@@ -29,8 +25,11 @@ function clearAuthInfo() {
   }
 }
 
+export let currentQR: string | null = null;
+export let connectionState: string = 'connecting';
+
 export async function initBaileys() {
-  let version;
+  let version: [number, number, number];
   try {
     const versionResult = await fetchLatestBaileysVersion();
     version = versionResult.version;
@@ -45,14 +44,10 @@ export async function initBaileys() {
     printQRInTerminal: false,
     auth: state,
     version,
-    browser: ['Chrome (Linux)', 'Chrome', '110.0.0.0'],
+    browser: ['Chrome (Linux)', 'Chrome', '110.0.0.0'] as any,
   });
 
-  store.readFromFile && store.readFromFile(`${STORE_PATH}/baileys_store.json`);
-  store.bind(sock.ev);
 
-export let currentQR: string | null = null;
-export let connectionState: string = 'connecting';
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
