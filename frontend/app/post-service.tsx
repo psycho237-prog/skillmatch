@@ -112,8 +112,19 @@ export default function PostService() {
     }
   };
 
+  const handleServiceTypeChange = (type: 'SKILL_TO_CASH' | 'SKILL_TO_SKILL') => {
+    setServiceType(type);
+    if (type === 'SKILL_TO_SKILL') {
+      setPriceType('exchange');
+      setPrice('0');
+    } else {
+      setPriceType('fixed');
+      setPrice('');
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!title || !description || (priceType !== 'exchange' && !price) || !location) {
+    if (!title || !description || (serviceType === 'SKILL_TO_CASH' && !price) || !location) {
       showAlert(t('error'), t('fill_all_fields'));
       return;
     }
@@ -150,10 +161,10 @@ export default function PostService() {
         title,
         description,
         category,
-        price: priceType === 'exchange' ? 0 : parseFloat(price),
-        price_type: priceType,
+        price: serviceType === 'SKILL_TO_SKILL' ? 0 : parseFloat(price),
+        price_type: serviceType === 'SKILL_TO_SKILL' ? 'exchange' : priceType,
         currency,
-        barter_skill: priceType === 'exchange' ? barterSkill : null,
+        barter_skill: serviceType === 'SKILL_TO_SKILL' ? barterSkill : null,
         location,
         images: uploadedUrls,
         service_type: serviceType,
@@ -259,7 +270,7 @@ export default function PostService() {
                   styles.typeChip,
                   { backgroundColor: serviceType === type ? colors.primary : colors.card, borderColor: colors.border }
                 ]}
-                onPress={() => setServiceType(type)}
+                onPress={() => handleServiceTypeChange(type)}
               >
                 <Typography variant="body2" color={serviceType === type ? 'white' : colors.black1}>
                   {type === 'SKILL_TO_CASH' ? 'Skill-to-Cash' : 'Skill-to-Skill'}
@@ -300,7 +311,7 @@ export default function PostService() {
             ))}
           </ScrollView>
 
-          {priceType !== 'exchange' ? (
+          {serviceType === 'SKILL_TO_CASH' ? (
             <>
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: 12 }}>

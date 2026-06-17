@@ -146,126 +146,134 @@ router.post('/initiate', authenticateToken, async (req, res) => {
 
 // POST /api/escrow/accept
 // Body: { escrowId } (Called by counterparty)
+// ⚡ Wallet-to-wallet: locks funds from in-app wallet instantly. No PawaPay calls here.
 router.post('/accept', authenticateToken, async (req, res) => {
   try {
     const { escrowId } = req.body;
-    const userId = req.user.id; // counterparty
+    const userId = req.user.id;
 
     const escrowRes = await query('SELECT * FROM escrows WHERE id = $1', [escrowId]);
-    if (escrowRes.rowCount === 0) {
-      return res.status(404).json({ error: 'Escrow not found' });
-    }
+    if (escrowRes.rowCount === 0) return res.status(404).json({ error: 'Escrow not found' });
     const escrow = escrowRes.rows[0];
 
     if (escrow.counterparty_id !== userId) {
       return res.status(403).json({ error: 'Only the counterparty can accept this transaction' });
     }
-
     if (escrow.status !== 'AWAITING_COUNTERPARTY') {
       return res.status(400).json({ error: 'Transaction cannot be accepted in its current status: ' + escrow.status });
     }
 
-    // Retrieve service
     const serviceRes = await query('SELECT * FROM services WHERE id = $1', [escrow.service_id]);
     const service = serviceRes.rows[0];
 
-    // Get profiles for phone numbers and correspondents
-    const initiatorRes = await query('SELECT * FROM users WHERE id = $1', [escrow.initiator_id]);
-    const counterpartyRes = await query('SELECT * FROM users WHERE id = $1', [escrow.counterparty_id]);
-    const initiator = initiatorRes.rows[0];
-    const counterparty = counterpartyRes.rows[0];
-
-    // Detect correspondents
-    const initiatorDetector = initiator.correspondent ? { currency: initiator.currency, correspondent: initiator.correspondent } : await pawapay.detectCorrespondent(initiator.phone_number);
-    const counterpartyDetector = counterparty.correspondent ? { currency: counterparty.currency, correspondent: counterparty.correspondent } : await pawapay.detectCorrespondent(counterparty.phone_number);
-
-    // Generate deposit IDs
-    let depositIdInitiator = null;
-    let depositIdCounterparty = null;
+    let lockMsg = '';
 
     if (escrow.type === 'SKILL_TO_CASH') {
+      // ── SKILL_TO_CASH: only the buyer (client) locks funds ──────────────────
       const { clientId } = getEscrowParties(escrow, service);
-      if (escrow.initiator_id === clientId) {
-        depositIdInitiator = crypto.randomUUID();
-        const payerCurrency = initiatorDetector.currency || escrow.currency || 'XAF';
-        // Record pending transaction
-        await query(
-          `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
-           VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-          [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, payerCurrency, escrow.id]
-        );
-        // Fire PawaPay Deposit
-        await pawapay.initiateDeposit(
-          depositIdInitiator,
-          initiator.phone_number,
-          escrow.amount_initiator,
-          payerCurrency,
-          initiatorDetector.correspondent
-        );
-      } else {
-        depositIdCounterparty = crypto.randomUUID();
-        const payerCurrency = counterpartyDetector.currency || escrow.currency || 'XAF';
-        // Record pending transaction
-        await query(
-          `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
-           VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-          [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, payerCurrency, escrow.id]
-        );
-        // Fire PawaPay Deposit
-        await pawapay.initiateDeposit(
-          depositIdCounterparty,
-          counterparty.phone_number,
-          escrow.amount_counterparty,
-          payerCurrency,
-          counterpartyDetector.correspondent
-        );
+      const lockAmount = parseFloat(clientId === escrow.initiator_id ? escrow.amount_initiator : escrow.amount_counterparty);
+
+      // Verify client wallet has enough balance
+      const clientWalletRes = await query(
+        'SELECT id, balance, pending_balance FROM wallets WHERE user_id = $1 FOR UPDATE',
+        [clientId]
+      );
+      if (clientWalletRes.rowCount === 0) {
+        return res.status(400).json({ error: 'Buyer wallet not found. Please top up your wallet first.' });
       }
+      const clientWallet = clientWalletRes.rows[0];
+      if (parseFloat(clientWallet.balance) < lockAmount) {
+        return res.status(400).json({
+          error: `Insufficient wallet balance. Need ${lockAmount} ${escrow.currency}, have ${clientWallet.balance} ${escrow.currency}. Please top up your wallet.`
+        });
+      }
+
+      // Lock: move from balance → pending_balance
+      await query(
+        'UPDATE wallets SET balance = balance - $1, pending_balance = pending_balance + $1, updated_at = NOW() WHERE user_id = $2',
+        [lockAmount, clientId]
+      );
+
+      // Record escrow lock transaction
+      await query(
+        `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+         VALUES ($1, $2, 'ESCROW_LOCK', $3, $4, 'COMPLETED', $5, NOW())`,
+        [crypto.randomUUID(), clientId, lockAmount, escrow.currency, escrow.id]
+      );
+
+      lockMsg = `🔒 Funds locked — ${lockAmount} ${escrow.currency} held in escrow`;
+
     } else {
-      // SKILL_TO_SKILL: deposits from both
-      depositIdInitiator = crypto.randomUUID();
-      depositIdCounterparty = crypto.randomUUID();
+      // ── SKILL_TO_SKILL: both parties lock their hold amount ──────────────────
+      const lockAmountA = parseFloat(escrow.amount_initiator);
+      const lockAmountB = parseFloat(escrow.amount_counterparty);
 
-      const initCurrency = initiatorDetector.currency || escrow.currency || 'XAF';
-      const countCurrency = counterpartyDetector.currency || escrow.currency || 'XAF';
+      const walletARes = await query(
+        'SELECT id, balance, pending_balance FROM wallets WHERE user_id = $1 FOR UPDATE',
+        [escrow.initiator_id]
+      );
+      const walletBRes = await query(
+        'SELECT id, balance, pending_balance FROM wallets WHERE user_id = $1 FOR UPDATE',
+        [escrow.counterparty_id]
+      );
 
-      // Initiate Initiator deposit
+      if (walletARes.rowCount === 0) return res.status(400).json({ error: 'Initiator wallet not found. Please top up wallet first.' });
+      if (walletBRes.rowCount === 0) return res.status(400).json({ error: 'Counterparty wallet not found. Please top up wallet first.' });
+
+      if (parseFloat(walletARes.rows[0].balance) < lockAmountA) {
+        return res.status(400).json({
+          error: `Initiator has insufficient balance. Need ${lockAmountA} ${escrow.currency}, have ${walletARes.rows[0].balance}.`
+        });
+      }
+      if (parseFloat(walletBRes.rows[0].balance) < lockAmountB) {
+        return res.status(400).json({
+          error: `Counterparty has insufficient balance. Need ${lockAmountB} ${escrow.currency}, have ${walletBRes.rows[0].balance}.`
+        });
+      }
+
+      // Lock both
       await query(
-        `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
-         VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-        [crypto.randomUUID(), escrow.initiator_id, depositIdInitiator, escrow.amount_initiator, initCurrency, escrow.id]
+        'UPDATE wallets SET balance = balance - $1, pending_balance = pending_balance + $1, updated_at = NOW() WHERE user_id = $2',
+        [lockAmountA, escrow.initiator_id]
       );
-      await pawapay.initiateDeposit(
-        depositIdInitiator,
-        initiator.phone_number,
-        escrow.amount_initiator,
-        initCurrency,
-        initiatorDetector.correspondent
+      await query(
+        'UPDATE wallets SET balance = balance - $1, pending_balance = pending_balance + $1, updated_at = NOW() WHERE user_id = $2',
+        [lockAmountB, escrow.counterparty_id]
       );
 
-      // Initiate Counterparty deposit
+      // Record lock transactions for both
       await query(
-        `INSERT INTO escrow_transactions (id, user_id, type, pawapay_deposit_id, amount, currency, status, escrow_id, created_at)
-         VALUES ($1, $2, 'DEPOSIT', $3, $4, $5, 'PENDING', $6, NOW())`,
-        [crypto.randomUUID(), escrow.counterparty_id, depositIdCounterparty, escrow.amount_counterparty, countCurrency, escrow.id]
+        `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+         VALUES ($1, $2, 'ESCROW_LOCK', $3, $4, 'COMPLETED', $5, NOW())`,
+        [crypto.randomUUID(), escrow.initiator_id, lockAmountA, escrow.currency, escrow.id]
       );
-      await pawapay.initiateDeposit(
-        depositIdCounterparty,
-        counterparty.phone_number,
-        escrow.amount_counterparty,
-        countCurrency,
-        counterpartyDetector.correspondent
+      await query(
+        `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+         VALUES ($1, $2, 'ESCROW_LOCK', $3, $4, 'COMPLETED', $5, NOW())`,
+        [crypto.randomUUID(), escrow.counterparty_id, lockAmountB, escrow.currency, escrow.id]
       );
+
+      lockMsg = `🔒 Exchange locked — ${lockAmountA} ${escrow.currency} held from both parties`;
     }
 
-    // Update escrow with deposit UUIDs
+    // Set escrow to BOTH_LOCKED immediately (no webhook wait needed)
     await query(
-      `UPDATE escrows 
-       SET deposit_id_initiator = $1, deposit_id_counterparty = $2, updated_at = NOW() 
-       WHERE id = $3`,
-      [depositIdInitiator, depositIdCounterparty, escrowId]
+      `UPDATE escrows SET status = 'BOTH_LOCKED', initiator_locked = true, counterparty_locked = true, updated_at = NOW() WHERE id = $1`,
+      [escrowId]
     );
 
-    res.json({ message: 'Transaction accepted. Deposits initiated.', depositIdInitiator, depositIdCounterparty });
+    // Send system message
+    const convRes = await query(
+      'SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))',
+      [escrow.service_id, escrow.initiator_id, escrow.counterparty_id]
+    );
+    if (convRes.rowCount > 0) {
+      await insertSystemMessage(convRes.rows[0].id, lockMsg);
+    }
+
+    notifyUsers(req, [escrow.initiator_id, escrow.counterparty_id], 'BOTH_LOCKED', { escrowId: escrow.id });
+
+    res.json({ message: 'Transaction accepted. Funds locked from in-app wallet.' });
   } catch (error) {
     console.error('Accept escrow error:', error);
     res.status(500).json({ error: error.message || 'Failed to accept escrow' });
@@ -325,18 +333,15 @@ router.post('/mark-delivered', authenticateToken, async (req, res) => {
 });
 
 // POST /api/escrow/confirm
-// Client confirms receipt.
-// SKILL_TO_CASH: payout (price - 5% fee) to provider.
-// SKILL_TO_SKILL: refund holdupAmount to both.
+// SKILL_TO_CASH: client confirms delivery → payout (price - 5% fee) from locked funds to provider.
+// SKILL_TO_SKILL: two-way handshake — each party confirms independently. Funds released when BOTH confirm.
 router.post('/confirm', authenticateToken, async (req, res) => {
   try {
     const { escrowId } = req.body;
     const userId = req.user.id;
 
     const escrowRes = await query('SELECT * FROM escrows WHERE id = $1', [escrowId]);
-    if (escrowRes.rowCount === 0) {
-      return res.status(404).json({ error: 'Escrow not found' });
-    }
+    if (escrowRes.rowCount === 0) return res.status(404).json({ error: 'Escrow not found' });
     const escrow = escrowRes.rows[0];
 
     const serviceRes = await query('SELECT * FROM services WHERE id = $1', [escrow.service_id]);
@@ -344,27 +349,87 @@ router.post('/confirm', authenticateToken, async (req, res) => {
 
     const { clientId, providerId } = getEscrowParties(escrow, service);
 
-    if (userId !== clientId) {
-      return res.status(403).json({ error: 'Only the client can confirm the receipt of service' });
+    if (escrow.type === 'SKILL_TO_SKILL') {
+      // ── SKILL_TO_SKILL: two-way handshake ──────────────────────────────────
+      if (userId !== clientId && userId !== providerId) {
+        return res.status(403).json({ error: 'You are not a party to this escrow' });
+      }
+      if (escrow.status !== 'BOTH_LOCKED') {
+        return res.status(400).json({ error: 'Cannot confirm exchange in current status: ' + escrow.status });
+      }
+
+      const isClient = userId === clientId;
+      const alreadyConfirmedClient = !!escrow.client_confirmed_at;
+      const alreadyConfirmedProvider = !!escrow.provider_confirmed_at;
+
+      // Prevent double-confirming
+      if (isClient && alreadyConfirmedClient) {
+        return res.status(400).json({ error: 'You have already confirmed this exchange. Waiting for the other party.' });
+      }
+      if (!isClient && alreadyConfirmedProvider) {
+        return res.status(400).json({ error: 'You have already confirmed this exchange. Waiting for the other party.' });
+      }
+
+      // Record this user's confirmation
+      if (isClient) {
+        await query('UPDATE escrows SET client_confirmed_at = NOW(), updated_at = NOW() WHERE id = $1', [escrowId]);
+      } else {
+        await query('UPDATE escrows SET provider_confirmed_at = NOW(), updated_at = NOW() WHERE id = $1', [escrowId]);
+      }
+
+      // Check if the OTHER party has also confirmed
+      const bothConfirmed = isClient ? alreadyConfirmedProvider : alreadyConfirmedClient;
+
+      if (!bothConfirmed) {
+        // Notify the other party that this user confirmed
+        const otherUserId = isClient ? providerId : clientId;
+        notifyUsers(req, [otherUserId], 'EXCHANGE_PARTIAL_CONFIRM', { escrowId, confirmedBy: userId });
+
+        const convRes = await query(
+          'SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))',
+          [escrow.service_id, escrow.initiator_id, escrow.counterparty_id]
+        );
+        if (convRes.rowCount > 0) {
+          await insertSystemMessage(convRes.rows[0].id, `✅ One party confirmed the exchange — waiting for the other to confirm`);
+        }
+        return res.json({ message: 'Your confirmation recorded. Waiting for the other party to confirm.', status: 'PARTIAL_CONFIRM' });
+      }
+
+      // Both confirmed — process refund/release
+      const freshEscrow = (await query('SELECT * FROM escrows WHERE id = $1', [escrowId])).rows[0];
+      await processEscrowPayout(freshEscrow, service);
+
+      const convRes = await query(
+        'SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))',
+        [escrow.service_id, escrow.initiator_id, escrow.counterparty_id]
+      );
+      if (convRes.rowCount > 0) {
+        await insertSystemMessage(convRes.rows[0].id, `✅ Exchange complete — both parties confirmed, holds released`);
+      }
+      notifyUsers(req, [escrow.initiator_id, escrow.counterparty_id], 'COMPLETED', { escrowId });
+      return res.json({ message: 'Exchange completed. Both confirmed. Holds released.' });
+
+    } else {
+      // ── SKILL_TO_CASH: only the client confirms after delivery ─────────────
+      if (userId !== clientId) {
+        return res.status(403).json({ error: 'Only the buyer can confirm receipt of service' });
+      }
+      if (escrow.status !== 'PROVIDER_MARKED_DONE' && escrow.status !== 'BOTH_LOCKED') {
+        return res.status(400).json({ error: 'Cannot confirm escrow in current status: ' + escrow.status });
+      }
+
+      await processEscrowPayout(escrow, service);
+
+      const convRes = await query(
+        'SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))',
+        [escrow.service_id, escrow.initiator_id, escrow.counterparty_id]
+      );
+      if (convRes.rowCount > 0) {
+        await insertSystemMessage(convRes.rows[0].id, `✅ Service confirmed — funds released to provider`);
+      }
+      notifyUsers(req, [escrow.initiator_id, escrow.counterparty_id], 'COMPLETED', { escrowId });
+      return res.json({ message: 'Service confirmed. Funds released to provider.' });
     }
-
-    if (escrow.status !== 'PROVIDER_MARKED_DONE' && escrow.status !== 'BOTH_LOCKED') {
-      return res.status(400).json({ error: 'Cannot confirm escrow in current status: ' + escrow.status });
-    }
-
-    await processEscrowPayout(escrow, service);
-
-    // Insert system message
-    const convRes = await query('SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))', [
-      escrow.service_id, escrow.initiator_id, escrow.counterparty_id
-    ]);
-    if (convRes.rowCount > 0) {
-      await insertSystemMessage(convRes.rows[0].id, `✅ Transaction complete — funds released`);
-    }
-
-    notifyUsers(req, [escrow.initiator_id, escrow.counterparty_id], 'COMPLETED', { escrowId });
-
-    res.json({ message: 'Escrow completed successfully. Funds released.' });
   } catch (error) {
     console.error('Confirm escrow error:', error);
     res.status(500).json({ error: error.message || 'Failed to confirm escrow' });
@@ -372,100 +437,96 @@ router.post('/confirm', authenticateToken, async (req, res) => {
 });
 
 // Core logic for processing payout releases/refunds
+// ⚡ Pure wallet-to-wallet — no PawaPay calls. All transfers are instant in-app.
 async function processEscrowPayout(escrow, service) {
   const { providerId, clientId } = getEscrowParties(escrow, service);
 
-  // Retrieve profiles
-  const providerRes = await query('SELECT * FROM users WHERE id = $1', [providerId]);
-  const clientRes = await query('SELECT * FROM users WHERE id = $1', [clientId]);
-  const provider = providerRes.rows[0];
-  const client = clientRes.rows[0];
-
   if (escrow.type === 'SKILL_TO_CASH') {
-    // Platform fee 5%
-    const totalAmount = parseFloat(escrow.amount_initiator || escrow.amount_counterparty);
-    const feeAmount = totalAmount * 0.05;
-    const payoutAmount = totalAmount - feeAmount;
+    // ── SKILL_TO_CASH: release client's locked funds, credit provider minus 5% fee ─
+    const totalAmount = parseFloat(clientId === escrow.initiator_id ? escrow.amount_initiator : escrow.amount_counterparty);
+    const feeAmount = parseFloat((totalAmount * 0.05).toFixed(2));
+    const payoutAmount = parseFloat((totalAmount - feeAmount).toFixed(2));
+    const currency = escrow.currency || 'XAF';
 
-    const providerDetector = await pawapay.detectCorrespondent(provider.phone_number);
-    const providerCurrency = provider.currency || providerDetector.currency || 'XAF';
-    const providerCorrespondent = provider.correspondent || providerDetector.respondent || providerDetector.correspondent || 'MTN_MOMO_CMR';
-
-    // Payout to provider
-    const payoutId = crypto.randomUUID();
+    // 1. Release client's locked pending funds
     await query(
-      `INSERT INTO escrow_transactions (id, user_id, type, pawapay_payout_id, amount, currency, status, escrow_id, created_at)
-       VALUES ($1, $2, 'PAYOUT', $3, $4, $5, 'PENDING', $6, NOW())`,
-      [crypto.randomUUID(), providerId, payoutId, payoutAmount, providerCurrency, escrow.id]
+      'UPDATE wallets SET pending_balance = pending_balance - $1, updated_at = NOW() WHERE user_id = $2',
+      [totalAmount, clientId]
     );
 
-    // Record fee transaction
+    // 2. Credit provider's wallet
+    await query(
+      'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2',
+      [payoutAmount, providerId]
+    );
+
+    // 3. Credit platform fee account
+    await query(
+      `UPDATE platform_account 
+       SET balance = balance + $1, total_commissions = total_commissions + $1, total_transactions = total_transactions + 1, updated_at = NOW() 
+       WHERE id = 1`,
+      [feeAmount]
+    );
+
+    // 4. Record payout transaction (provider receives)
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+       VALUES ($1, $2, 'PAYOUT', $3, $4, 'COMPLETED', $5, NOW())`,
+      [crypto.randomUUID(), providerId, payoutAmount, currency, escrow.id]
+    );
+
+    // 5. Record fee transaction
     await query(
       `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
        VALUES ($1, $2, 'FEE', $3, $4, 'COMPLETED', $5, NOW())`,
-      [crypto.randomUUID(), providerId, feeAmount, providerCurrency, escrow.id]
+      [crypto.randomUUID(), providerId, feeAmount, currency, escrow.id]
     );
 
-    // Call PawaPay Payout
-    await pawapay.initiatePayout(
-      payoutId,
-      provider.phone_number,
-      payoutAmount,
-      providerCurrency,
-      providerCorrespondent
-    );
-
-    // Mirror to provider's in-platform wallet (credit)
-    await query('UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2', [
-      payoutAmount, providerId
-    ]);
-
-    // Debit client's deposit from wallets since it is released
-    // Wait, the client deposits directly from MMO (PawaPay deposit webhook credited them, so they have a balance or we just lock it. Let's record escrow_lock transaction and debit wallet or record the release)
+    // 6. Record debit on client side
     await query(
       `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
        VALUES ($1, $2, 'ESCROW_RELEASE', $3, $4, 'COMPLETED', $5, NOW())`,
-      [crypto.randomUUID(), providerId, payoutAmount, escrow.currency, escrow.id]
+      [crypto.randomUUID(), clientId, totalAmount, currency, escrow.id]
     );
+
+    console.log(`[ESCROW PAYOUT] S2C: client=${clientId} paid ${totalAmount}, provider=${providerId} received ${payoutAmount}, fee=${feeAmount}`);
+
   } else {
-    // SKILL_TO_SKILL: refund holdupAmount to both
-    const refundIdA = crypto.randomUUID();
-    const refundIdB = crypto.randomUUID();
+    // ── SKILL_TO_SKILL: refund both hold amounts back from pending_balance → balance ─
+    const refundA = parseFloat(escrow.amount_initiator);
+    const refundB = parseFloat(escrow.amount_counterparty);
+    const currency = escrow.currency || 'XAF';
 
-    // Refund A (initiator)
-    const depIdA = escrow.deposit_id_initiator;
-    if (depIdA) {
-      await query(
-        `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
-         VALUES ($1, $2, 'REFUND', $3, $4, 'PENDING', $5, NOW())`,
-        [crypto.randomUUID(), escrow.initiator_id, escrow.amount_initiator, escrow.currency, escrow.id]
-      );
-      await pawapay.initiateRefund(refundIdA, depIdA, escrow.amount_initiator, escrow.currency);
-      await query('UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2', [
-        escrow.amount_initiator, escrow.initiator_id
-      ]);
-    }
+    // Refund initiator
+    await query(
+      'UPDATE wallets SET pending_balance = pending_balance - $1, balance = balance + $1, updated_at = NOW() WHERE user_id = $2',
+      [refundA, escrow.initiator_id]
+    );
 
-    // Refund B (counterparty)
-    const depIdB = escrow.deposit_id_counterparty;
-    if (depIdB) {
-      await query(
-        `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
-         VALUES ($1, $2, 'REFUND', $3, $4, 'PENDING', $5, NOW())`,
-        [crypto.randomUUID(), escrow.counterparty_id, escrow.amount_counterparty, escrow.currency, escrow.id]
-      );
-      await pawapay.initiateRefund(refundIdB, depIdB, escrow.amount_counterparty, escrow.currency);
-      await query('UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2', [
-        escrow.amount_counterparty, escrow.counterparty_id
-      ]);
-    }
+    // Refund counterparty
+    await query(
+      'UPDATE wallets SET pending_balance = pending_balance - $1, balance = balance + $1, updated_at = NOW() WHERE user_id = $2',
+      [refundB, escrow.counterparty_id]
+    );
+
+    // Record refund transactions for both
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+       VALUES ($1, $2, 'REFUND', $3, $4, 'COMPLETED', $5, NOW())`,
+      [crypto.randomUUID(), escrow.initiator_id, refundA, currency, escrow.id]
+    );
+    await query(
+      `INSERT INTO escrow_transactions (id, user_id, type, amount, currency, status, escrow_id, created_at)
+       VALUES ($1, $2, 'REFUND', $3, $4, 'COMPLETED', $5, NOW())`,
+      [crypto.randomUUID(), escrow.counterparty_id, refundB, currency, escrow.id]
+    );
+
+    console.log(`[ESCROW PAYOUT] S2S: initiator=${escrow.initiator_id} refunded ${refundA}, counterparty=${escrow.counterparty_id} refunded ${refundB}`);
   }
 
-  // Set escrow status to COMPLETED
+  // Mark escrow as COMPLETED
   await query(
-    `UPDATE escrows 
-     SET status = 'COMPLETED', client_confirmed_at = NOW(), updated_at = NOW() 
-     WHERE id = $1`,
+    `UPDATE escrows SET status = 'COMPLETED', client_confirmed_at = NOW(), updated_at = NOW() WHERE id = $1`,
     [escrow.id]
   );
 }

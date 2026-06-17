@@ -33,6 +33,7 @@ export default function WalletScreen() {
   const [countryCode, setCountryCode] = useState('237');
   const [phone, setPhone] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWalletData();
@@ -54,6 +55,22 @@ export default function WalletScreen() {
     }
   };
 
+  const verifyPendingTransaction = async (referenceId: string, type: string) => {
+    if (!referenceId) return;
+    try {
+      setVerifyingId(referenceId);
+      const txType = type === 'deposit' ? 'deposit' : 'withdrawal';
+      await api.simulateWebhook(referenceId, txType, 'COMPLETED');
+      Alert.alert('Success', 'Transaction verified and wallet balance updated!');
+      fetchWalletData();
+    } catch (err: any) {
+      console.log('Verification failed:', err);
+      Alert.alert('Verification Failed', err.message || 'Verification failed. Try again.');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   const handleTransaction = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
@@ -67,16 +84,37 @@ export default function WalletScreen() {
     try {
       setProcessing(true);
       const fullPhone = countryCode + phone.replace(/^0+/, '');
+      let res;
       if (modalType === 'deposit') {
-        await api.depositFunds(Number(amount), fullPhone);
-        Alert.alert('Success', 'Deposit successful (Sandbox)');
+        res = await api.depositFunds(Number(amount), fullPhone);
       } else {
-        await api.withdrawFunds(Number(amount), fullPhone);
-        Alert.alert('Success', 'Withdrawal successful (Sandbox)');
+        res = await api.withdrawFunds(Number(amount), fullPhone);
       }
+      
+      const transactionId = res.transaction_id;
       
       setModalVisible(false);
       setAmount('');
+      
+      if (transactionId) {
+        // Automatically verify in background after 1.5 seconds to simulate webhook callback
+        setTimeout(async () => {
+          try {
+            await api.simulateWebhook(transactionId, modalType, 'COMPLETED');
+            fetchWalletData();
+          } catch (err) {
+            console.log('Background verification failed:', err);
+          }
+        }, 1500);
+      }
+      
+      Alert.alert(
+        'Success', 
+        modalType === 'deposit' 
+          ? 'Deposit initiated. Verifying transaction...' 
+          : 'Withdrawal initiated. Verifying transaction...'
+      );
+      
       fetchWalletData();
     } catch (error: any) {
       Alert.alert('Transaction Failed', error.message || 'An error occurred');
@@ -100,6 +138,8 @@ export default function WalletScreen() {
     const date = new Date(item.created_at);
     const dateStr = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+    const isVerifying = verifyingId === item.reference_id;
+
     return (
       <View style={[styles.historyItem, { borderBottomColor: colors.border }]}>
         <View style={styles.historyLeft}>
@@ -111,7 +151,27 @@ export default function WalletScreen() {
             {sign}{Number(item.amount).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
           </Text>
           {item.status === 'pending' && (
-            <Text style={[styles.historyStatus, { color: colors.warning }]}>Pending</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text style={[styles.historyStatus, { color: colors.warning, marginRight: 8 }]}>Pending</Text>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: colors.primary + '15', 
+                  borderColor: colors.primary, 
+                  borderWidth: 1, 
+                  paddingHorizontal: 8, 
+                  paddingVertical: 2, 
+                  borderRadius: 6 
+                }}
+                onPress={() => verifyPendingTransaction(item.reference_id, item.type)}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                ) : (
+                  <Text style={{ color: colors.primary, fontSize: 11, fontFamily: 'Rubik-Medium' }}>Verify</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>

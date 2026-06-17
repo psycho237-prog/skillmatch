@@ -49,6 +49,11 @@ class ApiService {
       }
 
       let data: any;
+      // Empty body on a successful response is valid (e.g. webhook endpoints return 200 with no body)
+      if (text.trim() === '' || text.trim() === 'OK') {
+        if (response.ok) return {};
+        throw new Error(`Request failed (HTTP ${response.status})`);
+      }
       try {
         data = JSON.parse(text);
       } catch {
@@ -339,6 +344,31 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ amount, mobile_money_number: mobileMoneyNumber }),
     });
+  }
+
+  async simulateWebhook(transactionId: string, type: 'deposit' | 'withdrawal', status: 'COMPLETED' | 'FAILED') {
+    // The webhook endpoint intentionally returns HTTP 200 with an EMPTY body (no JSON).
+    // Using raw fetch here to avoid the JSON-parsing request() method crashing on empty body.
+    const payload: any = { status };
+    if (type === 'deposit') {
+      payload.depositId = transactionId;
+    } else {
+      payload.payoutId = transactionId;
+    }
+    const token = await this.getToken();
+    const response = await fetch(`${this.baseUrl}/webhooks/mobile-money/callback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Webhook simulation failed (HTTP ${response.status}): ${text}`);
+    }
+    return { success: true, status: response.status };
   }
 
   // Transactions (Remote)

@@ -8,7 +8,7 @@ import { Button } from '../../src/components/Button';
 import { api } from '../../src/services/api';
 import { images } from '../../src/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CountryPicker } from '../../src/components/CountryPicker';
+import { CountryPicker, COUNTRIES } from '../../src/components/CountryPicker';
 
 export default function Welcome() {
   const router = useRouter();
@@ -40,6 +40,28 @@ export default function Welcome() {
     setOtpCode('');
   };
 
+  // Normalize the phone number: strip non-digits, avoid double country code
+  const normalizePhone = (raw: string, code: string): string => {
+    const clean = raw.trim();
+    // Strip everything except digits
+    let digits = clean.replace(/[^\d]/g, '');
+    // Remove leading zeros
+    digits = digits.replace(/^0+/, '');
+    
+    // If user explicitly typed '+', trust the code and don't prepend picker code
+    if (clean.startsWith('+')) {
+      return digits;
+    }
+    
+    // If the number already starts with any known country code, don't double it
+    const matchedCountry = COUNTRIES.find(c => digits.startsWith(c.code));
+    if (matchedCountry) {
+      return digits;
+    }
+    
+    return code + digits;
+  };
+
   const handleSubmit = async () => {
     if (isLogin) {
       if (!phoneNumber || !password) {
@@ -49,7 +71,7 @@ export default function Welcome() {
 
       try {
         setLoading(true);
-        const fullPhone = countryCode + phoneNumber.replace(/^0+/, ''); // strip leading zero
+        const fullPhone = normalizePhone(phoneNumber, countryCode);
         const res = await api.loginWithPhone(fullPhone, password);
         await setUser(res.user, res.token);
         router.replace('/(tabs)/home');
@@ -67,7 +89,7 @@ export default function Welcome() {
 
         try {
           setLoading(true);
-          const fullPhone = countryCode + phoneNumber.replace(/^0+/, '');
+          const fullPhone = normalizePhone(phoneNumber, countryCode);
           const res = await api.sendOtp(fullPhone);
           if (res.debug_otp) {
             showAlert('Verification Code (Debug)', `Your code is: ${res.debug_otp}`);
@@ -88,7 +110,7 @@ export default function Welcome() {
 
         try {
           setLoading(true);
-          const fullPhone = countryCode + phoneNumber.replace(/^0+/, '');
+          const fullPhone = normalizePhone(phoneNumber, countryCode);
           const res = await api.registerWithPhone(fullPhone, password, displayName, otpCode);
           await setUser(res.user, res.token);
           router.replace('/(tabs)/home');

@@ -84,10 +84,12 @@ export default function ServiceDetail() {
 
   const formatPrice = () => {
     if (!service) return '';
-    if (service.price_type === 'exchange') return t('exchange');
+    const symbol = getCurrencySymbol(service.currency || 'USD');
+    if (service.price_type === 'exchange') {
+      return `Hold: ${service.holdup_amount ? Number(service.holdup_amount).toLocaleString() : '0'} ${symbol}`;
+    }
     if (service.price_type === 'negotiable') return t('negotiable');
     
-    const symbol = getCurrencySymbol(service.currency || 'USD');
     const suffix = service.price_type === 'hourly' ? t('per_hour') : '';
     
     if (service.currency === 'XAF') {

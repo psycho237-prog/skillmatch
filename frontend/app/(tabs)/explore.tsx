@@ -143,6 +143,7 @@ export default function Explore() {
             variant="horizontal"
             isFavorited={!!item.is_favorited}
             onToggleFavorite={() => handleToggleFavorite(item.id)}
+            holdupAmount={item.holdup_amount}
           />
         ))}
         {results.length === 0 && !loading && (

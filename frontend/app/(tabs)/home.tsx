@@ -164,6 +164,7 @@ export default function Home() {
                   variant="vertical"
                   isFavorited={!!item.is_favorited}
                   onToggleFavorite={() => handleToggleFavorite(item.id)}
+                  holdupAmount={item.holdup_amount}
                 />
               ))}
             </ScrollView>
@@ -221,6 +222,7 @@ export default function Home() {
                   variant="horizontal"
                   isFavorited={!!item.is_favorited}
                   onToggleFavorite={() => handleToggleFavorite(item.id)}
+                  holdupAmount={item.holdup_amount}
                 />
 
               ))}

@@ -159,18 +159,42 @@ export default function ChatRoom() {
   // Escrow Handler operations
   const handleInitiateEscrow = async () => {
     if (!conversation || !user) return;
-    try {
-      setLoadingEscrow(true);
-      const otherUserId = user.id === conversation.user1_id ? conversation.user2_id : conversation.user1_id;
-      await api.initiateEscrow(conversation.service_id, otherUserId, conversation.id);
-      Alert.alert("Success", "Transaction initiated successfully. Waiting for counterparty to accept.");
-      loadConversationAndEscrow();
-      fetchMessages();
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to initiate transaction");
-    } finally {
-      setLoadingEscrow(false);
-    }
+    const isSkillToCash = conversation.service_type === 'SKILL_TO_CASH';
+    const price = conversation.service_price;
+    const currency = conversation.currency || 'XAF';
+    const confirmMsg = isSkillToCash
+      ? `You are about to lock ${price} ${currency} into escrow for "${conversation.service_title}". This amount will be held until the service is delivered and you confirm it.`
+      : `Both parties will have their hold amount locked. The exchange will complete once both confirm.`;
+    Alert.alert(
+      isSkillToCash ? 'Confirm Purchase 💳' : 'Initiate Exchange',
+      confirmMsg,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isSkillToCash ? 'Buy & Lock Funds' : 'Initiate',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setLoadingEscrow(true);
+              const counterparty = user.id === conversation.user1_id ? conversation.user2_id : conversation.user1_id;
+              await api.initiateEscrow(conversation.service_id, counterparty, conversation.id);
+              Alert.alert(
+                isSkillToCash ? '🔒 Purchase Requested' : '🔒 Exchange Initiated',
+                isSkillToCash
+                  ? 'The service provider will now confirm your request. Your funds will be locked on acceptance.'
+                  : 'Waiting for the other party to accept and lock their hold amount.'
+              );
+              loadConversationAndEscrow();
+              fetchMessages();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to initiate transaction');
+            } finally {
+              setLoadingEscrow(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAcceptEscrow = async () => {
@@ -178,11 +202,15 @@ export default function ChatRoom() {
     try {
       setLoadingEscrow(true);
       await api.acceptEscrow(escrow.id);
-      Alert.alert("Deposit Requested", "Payment deposit requested. Please confirm the mobile money payment prompt on your phone.");
+      // Escrow is now instantly locked via wallet-to-wallet — no webhook simulation needed
+      Alert.alert(
+        '🔒 Order Accepted!',
+        'Funds have been instantly locked from the buyer\'s wallet into escrow. You can now begin work on the service.'
+      );
       loadConversationAndEscrow();
       fetchMessages();
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to accept transaction");
+      Alert.alert('Error', err.message || 'Failed to accept transaction');
     } finally {
       setLoadingEscrow(false);
     }
@@ -271,78 +299,186 @@ export default function ChatRoom() {
       return <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 12 }} />;
     }
 
+    const serviceType = conversation?.service_type;
+    const isProvider = (user?.id === conversation?.service_owner_id);
+    const isBuyer = !isProvider;
+    const currency = conversation?.currency || 'XAF';
+
+    // ─── NO ACTIVE ESCROW ───────────────────────────────────────────────────────
     if (!escrow) {
-      // Show Initiate Transaction button
+      if (serviceType === 'SKILL_TO_CASH') {
+        // Only the buyer (non-provider) can initiate a purchase
+        if (isBuyer) {
+          return (
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#007AFF', paddingHorizontal: 14 }]}
+              onPress={handleInitiateEscrow}
+            >
+              <Typography variant="body2" color="white" weight="bold">BUY SERVICE 💳</Typography>
+            </TouchableOpacity>
+          );
+        } else {
+          // Provider cannot initiate — they wait for a buyer
+          return (
+            <Typography variant="caption" color={colors.black3} style={styles.escrowStatusText}>
+              Awaiting buyer...
+            </Typography>
+          );
+        }
+      }
+      // SKILL_TO_SKILL — either party can initiate
       return (
         <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.primary }]} onPress={handleInitiateEscrow}>
-          <Typography variant="body2" color="white" weight="bold">INITIATE TRANSACTION</Typography>
+          <Typography variant="body2" color="white" weight="bold">INITIATE EXCHANGE 🔄</Typography>
         </TouchableOpacity>
       );
     }
 
-    const isProvider = (user?.id === conversation?.service_owner_id);
     const isClient = !isProvider;
 
+    // ─── AWAITING COUNTERPARTY ──────────────────────────────────────────────────
     if (escrow.status === 'AWAITING_COUNTERPARTY') {
       const isCounterparty = (user?.id === escrow.counterparty_id);
       if (isCounterparty) {
+        // For SKILL_TO_CASH: provider accepts the buyer's request
+        const acceptLabel = serviceType === 'SKILL_TO_CASH' ? 'ACCEPT ORDER' : 'ACCEPT';
         return (
           <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.primary, marginRight: 8 }]} onPress={handleAcceptEscrow}>
-              <Typography variant="caption" color="white" weight="bold">ACCEPT</Typography>
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#34C759', marginRight: 8 }]}
+              onPress={handleAcceptEscrow}
+            >
+              <Typography variant="caption" color="white" weight="bold">{acceptLabel} ✅</Typography>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.danger }]} onPress={() => Alert.alert("Decline", "Escrow declined by counterparty.")}>
-              <Typography variant="caption" color="white" weight="bold">DECLINE</Typography>
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#FF3B30' }]}
+              onPress={() => Alert.alert('Decline Request', 'Are you sure you want to decline this request?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Decline', style: 'destructive', onPress: () => Alert.alert('Declined', 'Request declined.') }
+              ])}
+            >
+              <Typography variant="caption" color="white" weight="bold">DECLINE ✗</Typography>
             </TouchableOpacity>
           </View>
         );
       } else {
+        const waitMsg = serviceType === 'SKILL_TO_CASH'
+          ? 'Waiting for provider to accept...'
+          : 'Waiting for counterparty...';
         return (
           <Typography variant="caption" color={colors.black3} style={styles.escrowStatusText}>
-            Waiting for accept...
+            {waitMsg}
           </Typography>
         );
       }
     }
 
+    // ─── BOTH LOCKED ────────────────────────────────────────────────────────────
     if (escrow.status === 'BOTH_LOCKED') {
-      if (isProvider) {
-        return (
-          <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.primary }]} onPress={handleMarkDelivered}>
-            <Typography variant="body2" color="white" weight="bold">MARK DELIVERED 📦</Typography>
-          </TouchableOpacity>
-        );
-      } else {
-        return (
-          <Typography variant="body2" color={colors.primary} weight="bold" style={styles.escrowStatusText}>
-            Locked 🔒
-          </Typography>
-        );
+      if (serviceType === 'SKILL_TO_CASH') {
+        if (isProvider) {
+          return (
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#FF9500' }]}
+              onPress={() =>
+                Alert.alert('Mark as Delivered?', 'Confirm that you have completed the service. The buyer will then have 48h to confirm or dispute.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Yes, Mark Delivered', onPress: handleMarkDelivered },
+                ])
+              }
+            >
+              <Typography variant="body2" color="white" weight="bold">MARK DELIVERED 📦</Typography>
+            </TouchableOpacity>
+          );
+        } else {
+          // Buyer: funds are locked, waiting for provider to complete
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Typography variant="body2" color="#34C759" weight="bold" style={styles.escrowStatusText}>
+                💰 Funds Locked
+              </Typography>
+            </View>
+          );
+        }
       }
+      // SKILL_TO_SKILL in BOTH_LOCKED — both sides locked, either can confirm
+      return (
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity
+            style={[styles.escrowActionBtn, { backgroundColor: '#34C759', marginRight: 8 }]}
+            onPress={handleConfirmEscrow}
+          >
+            <Typography variant="caption" color="white" weight="bold">CONFIRM EXCHANGE ✅</Typography>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.escrowActionBtn, { backgroundColor: '#FF3B30' }]}
+            onPress={handleDispute}
+          >
+            <Typography variant="caption" color="white" weight="bold">DISPUTE ⚠️</Typography>
+          </TouchableOpacity>
+        </View>
+      );
     }
 
+    // ─── PROVIDER MARKED DONE ───────────────────────────────────────────────────
     if (escrow.status === 'PROVIDER_MARKED_DONE') {
       if (isClient) {
         return (
           <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.primary, marginRight: 8 }]} onPress={handleConfirmEscrow}>
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#34C759', marginRight: 8 }]}
+              onPress={() =>
+                Alert.alert('Confirm Service Delivery?', 'By confirming, funds will be released to the provider. Only do this if you are satisfied with the service.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Yes, Release Funds ✅', onPress: handleConfirmEscrow },
+                ])
+              }
+            >
               <Typography variant="caption" color="white" weight="bold">CONFIRM ✅</Typography>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.escrowActionBtn, { backgroundColor: colors.danger }]} onPress={handleDispute}>
+            <TouchableOpacity
+              style={[styles.escrowActionBtn, { backgroundColor: '#FF3B30' }]}
+              onPress={handleDispute}
+            >
               <Typography variant="caption" color="white" weight="bold">DISPUTE ⚠️</Typography>
             </TouchableOpacity>
           </View>
         );
       } else {
         return (
-          <Typography variant="caption" color={colors.black3} style={styles.escrowStatusText}>
-            Delivered. Awaiting confirm...
+          <Typography variant="caption" color="#FF9500" weight="bold" style={styles.escrowStatusText}>
+            Delivered — Awaiting confirmation
           </Typography>
         );
       }
     }
 
-    // Fallbacks
+    // ─── DISPUTED ───────────────────────────────────────────────────────────────
+    if (escrow.status === 'DISPUTED' || escrow.status === 'DISPUTE_NO_PROOF') {
+      return (
+        <Typography variant="caption" color="#FF3B30" weight="bold" style={styles.escrowStatusText}>
+          ⚠️ In dispute — Admin reviewing
+        </Typography>
+      );
+    }
+
+    // ─── COMPLETED / CANCELLED / FORFEITED ─────────────────────────────────────
+    if (escrow.status === 'COMPLETED') {
+      return (
+        <Typography variant="caption" color="#34C759" weight="bold" style={styles.escrowStatusText}>
+          ✅ Transaction Complete
+        </Typography>
+      );
+    }
+    if (escrow.status === 'CANCELLED' || escrow.status === 'REFUNDED' || escrow.status === 'FORFEITED') {
+      return (
+        <Typography variant="caption" color={colors.black3} weight="bold" style={styles.escrowStatusText}>
+          Transaction {escrow.status.toLowerCase()}
+        </Typography>
+      );
+    }
+
+    // Generic fallback
     return (
       <Typography variant="caption" color={colors.primary} weight="bold" style={styles.escrowStatusText}>
         Status: {escrow.status}
@@ -565,6 +701,7 @@ export default function ChatRoom() {
   };
 
   return (
+    
     <KeyboardAvoidingView 
       style={[styles.container, { backgroundColor: colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -606,12 +743,18 @@ export default function ChatRoom() {
       {conversation && conversation.service_id && (
         <View style={[styles.escrowBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <View style={styles.escrowTextCol}>
-            <Typography variant="body2" weight="bold">
-              Service: "{conversation.service_title}" — {conversation.service_price} {conversation.currency || 'XAF'}
+            <Typography variant="body2" weight="bold" numberOfLines={1}>
+              {conversation.service_title}
             </Typography>
-            <Typography variant="caption" color={colors.black3}>
-              Commitment Hold: {conversation.holdup_amount} {conversation.currency || 'XAF'}
-            </Typography>
+            {conversation.service_type === 'SKILL_TO_CASH' ? (
+              <Typography variant="caption" color={colors.black3}>
+                Price: {conversation.service_price} {conversation.currency || 'XAF'}
+              </Typography>
+            ) : (
+              <Typography variant="caption" color={colors.black3}>
+                Hold: {conversation.holdup_amount} {conversation.currency || 'XAF'} each
+              </Typography>
+            )}
           </View>
           {renderEscrowActions()}
         </View>
@@ -619,7 +762,7 @@ export default function ChatRoom() {
 
       {/* iOS Style Input */}
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-        <TouchableOpacity style={styles.attachBtn} onPress={() => setShowAttachModal(true)} disabled={uploadingMedia}>
+        <TouchableOpacity style={[styles.attachBtn, {marginBottom:Platform.OS === 'ios' ? 0 : 40}]} onPress={() => setShowAttachModal(true)} disabled={uploadingMedia}>
           {uploadingMedia ? (
             <ActivityIndicator size="small" color={colors.black3} />
           ) : (
@@ -627,7 +770,7 @@ export default function ChatRoom() {
           )}
         </TouchableOpacity>
         
-        <View style={[styles.inputWrapper, { backgroundColor: theme === 'dark' ? '#1C1C1E' : '#FFFFFF', borderColor: colors.border }]}>
+        <View style={[styles.inputWrapper, { backgroundColor: theme === 'dark' ? '#1C1C1E' : '#FFFFFF', borderColor: colors.border,marginBottom:Platform.OS === 'ios' ? 0 : 40}]}>
           <TextInput
             style={[styles.input, { color: colors.black1 }]}
             placeholder="iMessage"
@@ -640,7 +783,7 @@ export default function ChatRoom() {
         </View>
         
         <TouchableOpacity 
-          style={[styles.sendBtn, { backgroundColor: input.trim() ? '#007AFF' : 'transparent' }]} 
+          style={[styles.sendBtn, { backgroundColor: input.trim() ? '#007AFF' : 'transparent',marginBottom:Platform.OS === 'ios' ? 0 : 40 }]} 
           onPress={handleSend}
           disabled={!input.trim()}
         >

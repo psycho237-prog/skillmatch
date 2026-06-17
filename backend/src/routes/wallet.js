@@ -14,10 +14,18 @@ router.use(authenticateToken);
 // GET /api/wallet/balance
 router.get('/balance', async (req, res) => {
   try {
-    const userId = req.user.id; // requires auth middleware
-    const result = await query('SELECT balance, pending_balance, currency FROM wallets WHERE user_id = $1', [userId]);
+    const userId = req.user.id;
+    let result = await query('SELECT balance, pending_balance, currency FROM wallets WHERE user_id = $1', [userId]);
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Wallet not found' });
+      // Auto-create wallet for users who registered before wallet schema was applied
+      const created = await query(
+        `INSERT INTO wallets (user_id, balance, pending_balance, currency)
+         VALUES ($1, 0.00, 0.00, 'XAF')
+         ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+         RETURNING balance, pending_balance, currency`,
+        [userId]
+      );
+      result = created;
     }
     res.json(result.rows[0]);
   } catch (err) {
@@ -48,10 +56,18 @@ router.post('/deposit', async (req, res) => {
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
     if (!mobile_money_number) return res.status(400).json({ error: 'Mobile money number required' });
 
-    // Fetch wallet id and balances
-    const walletRes = await query('SELECT id, balance, pending_balance FROM wallets WHERE user_id = $1', [userId]);
+    // Fetch wallet id and balances (auto-create if missing)
+    let walletRes = await query('SELECT id, balance, pending_balance FROM wallets WHERE user_id = $1', [userId]);
+    if (walletRes.rows.length === 0) {
+      walletRes = await query(
+        `INSERT INTO wallets (user_id, balance, pending_balance, currency)
+         VALUES ($1, 0.00, 0.00, 'XAF')
+         ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+         RETURNING id, balance, pending_balance`,
+        [userId]
+      );
+    }
     const wallet = walletRes.rows[0];
-    if (!wallet) return res.status(404).json({ error: 'Wallet not found' });
 
     // 1. Predict Operator details (dynamic currency and correspondent support)
     const pred = await pawapay.detectCorrespondent(mobile_money_number);

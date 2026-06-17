@@ -5,6 +5,7 @@ import { useApp } from '../contexts/AppContext';
 
 export const COUNTRIES = [
   { code: '237', name: 'Cameroon', flag: '🇨🇲' },
+  { code: '33', name: 'France', flag: '🇫🇷' },
   { code: '225', name: 'Ivory Coast', flag: '🇨🇮' },
   { code: '221', name: 'Senegal', flag: '🇸🇳' },
   { code: '234', name: 'Nigeria', flag: '🇳🇬' },

@@ -20,6 +20,7 @@ export interface ServiceCardProps {
   variant?: 'horizontal' | 'vertical';
   isFavorited?: boolean;
   onToggleFavorite?: () => void;
+  holdupAmount?: number;
 }
 
 export const ServiceCard = ({
@@ -36,6 +37,7 @@ export const ServiceCard = ({
   variant = 'vertical',
   isFavorited,
   onToggleFavorite,
+  holdupAmount,
 }: ServiceCardProps) => {
   const { colors, t } = useApp();
   const router = useRouter();
@@ -52,10 +54,13 @@ export const ServiceCard = ({
   };
 
   const formatPrice = () => {
-    if (priceType === 'exchange') return t('exchange');
+    const symbol = getCurrencySymbol(currency);
+    if (priceType === 'exchange') {
+      const hold = holdupAmount ? Number(holdupAmount).toLocaleString() : '0';
+      return `Hold: ${hold} ${symbol}`;
+    }
     if (priceType === 'negotiable') return t('negotiable');
     
-    const symbol = getCurrencySymbol(currency);
     const suffix = priceType === 'hourly' ? t('per_hour') : '';
     
     if (currency === 'XAF') {
