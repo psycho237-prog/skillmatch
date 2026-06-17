@@ -41,10 +41,22 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      const text = await response.text();
+
+      // Detect HTML error pages (nginx 502/504, etc.)
+      if (text.trim().startsWith('<')) {
+        throw new Error(`Server error (HTTP ${response.status}): The server returned an unexpected response. Please check if the backend is reachable.`);
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Invalid JSON response from server (HTTP ${response.status})`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Request failed');
+        throw new Error(data.error || data.message || 'Request failed');
       }
 
       return data;
