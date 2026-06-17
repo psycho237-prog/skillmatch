@@ -37,6 +37,7 @@ export default function ChatRoom() {
   const [conversation, setConversation] = useState<any>(null);
   const [escrow, setEscrow] = useState<any>(null);
   const [loadingEscrow, setLoadingEscrow] = useState(false);
+  const [myConfirmedExchange, setMyConfirmedExchange] = useState(false); // S2S partial confirm tracker
 
   // Dispute modal state
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
@@ -235,20 +236,33 @@ export default function ChatRoom() {
     if (!escrow || !user || !conversation) return;
     try {
       setLoadingEscrow(true);
-      await api.confirmEscrow(escrow.id);
-      Alert.alert("Completed!", "Escrow completed successfully. Funds released.");
+      const res = await api.confirmEscrow(escrow.id);
+
+      if (res?.status === 'PARTIAL_CONFIRM') {
+        // S2S two-way handshake: this user confirmed, waiting for the other
+        setMyConfirmedExchange(true);
+        Alert.alert('✅ Confirmed!', 'Your confirmation recorded. Waiting for the other party to confirm. Holds will be released once both confirm.');
+        loadConversationAndEscrow();
+        fetchMessages();
+        return;
+      }
+
+      // Fully completed
+      Alert.alert('✅ Completed!', 'Transaction complete. Funds have been released.');
+      setMyConfirmedExchange(false);
       loadConversationAndEscrow();
       fetchMessages();
 
-      // Trigger rating modal immediately
+      // Trigger rating modal
       const revieweeId = user.id === escrow.initiator_id ? escrow.counterparty_id : escrow.initiator_id;
       const revieweeName = user.id === conversation.user1_id ? conversation.user2_name : conversation.user1_name;
       setRatingRevieweeId(revieweeId);
+      setRatingRevieweeName(revieweeName);
       setRatingScore(5);
       setRatingComment('');
       setRatingModalVisible(true);
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to confirm transaction");
+      Alert.alert('Error', err.message || 'Failed to confirm transaction');
     } finally {
       setLoadingEscrow(false);
     }
@@ -402,11 +416,24 @@ export default function ChatRoom() {
         }
       }
       // SKILL_TO_SKILL in BOTH_LOCKED — both sides locked, either can confirm
+      // If this user already confirmed, show waiting state
+      if (myConfirmedExchange) {
+        return (
+          <Typography variant="caption" color="#FF9500" weight="bold" style={styles.escrowStatusText}>
+            ✅ You confirmed — waiting for other party...
+          </Typography>
+        );
+      }
       return (
         <View style={{ flexDirection: 'row' }}>
           <TouchableOpacity
             style={[styles.escrowActionBtn, { backgroundColor: '#34C759', marginRight: 8 }]}
-            onPress={handleConfirmEscrow}
+            onPress={() =>
+              Alert.alert('Confirm Exchange?', 'Confirming means you are satisfied with the exchange. Both parties must confirm for holds to be released.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Confirm ✅', onPress: handleConfirmEscrow },
+              ])
+            }
           >
             <Typography variant="caption" color="white" weight="bold">CONFIRM EXCHANGE ✅</Typography>
           </TouchableOpacity>

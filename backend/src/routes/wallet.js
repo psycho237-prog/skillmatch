@@ -4,9 +4,11 @@ const { query } = require('../config/database');
 const { processDeposit, processWithdrawal } = require('../config/wallet');
 const crypto = require('crypto');
 const pawapay = require('../services/pawapay');
+const { reconcilePendingTransactions } = require('../services/walletReconciler');
 
+const isProduction = process.env.PAWAPAY_ENV === 'production';
 const PAWAPAY_TOKEN = process.env.PAWAPAY_API_KEY || process.env.PAWAPAY_API_TOKEN || 'eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzE4NDAzMSwiaWF0IjoxNzgxNTY0ODMxLCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0ZTgwZWU0NS0zNTJkLTRjYzMtOGY4My03MmJkZjViMjkyNjYifQ.8xYbS6zbVuYRi8_FGEmsvmGg-KjxRDbNafk9iu8MxqRytL2s3l3Zk332KLZBidRYIt_fLmo0eOvqGkvsXRG2aQ';
-const PAWAPAY_BASE_URL = 'https://api.sandbox.pawapay.io';
+const PAWAPAY_BASE_URL = process.env.PAWAPAY_BASE_URL || (isProduction ? 'https://api.pawapay.io' : 'https://api.sandbox.pawapay.io');
 const { authenticateToken } = require('../middleware/auth');
 
 router.use(authenticateToken);
@@ -15,6 +17,10 @@ router.use(authenticateToken);
 router.get('/balance', async (req, res) => {
   try {
     const userId = req.user.id;
+    
+    // Automatically poll and reconcile status of any pending transactions for this user first
+    await reconcilePendingTransactions(userId, req);
+
     let result = await query('SELECT balance, pending_balance, currency FROM wallets WHERE user_id = $1', [userId]);
     if (result.rows.length === 0) {
       // Auto-create wallet for users who registered before wallet schema was applied
@@ -37,6 +43,10 @@ router.get('/balance', async (req, res) => {
 router.get('/history', async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Automatically poll and reconcile status of any pending transactions for this user first
+    await reconcilePendingTransactions(userId, req);
+
     const result = await query(
       'SELECT * FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', 
       [userId]
@@ -83,6 +93,9 @@ router.post('/deposit', async (req, res) => {
         headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
       if (confRes.status === 401) {
+        if (isProduction) {
+          return res.status(500).json({ error: 'Payment gateway configuration error (unauthorized token)' });
+        }
         fallbackToMock = true;
       } else {
         // Call the wrapper
@@ -99,6 +112,9 @@ router.post('/deposit', async (req, res) => {
       }
     } catch (err) {
       console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
+      if (isProduction) {
+        return res.status(500).json({ error: 'Payment gateway communication failure' });
+      }
       fallbackToMock = true;
     }
 
@@ -170,6 +186,9 @@ router.post('/withdraw', async (req, res) => {
         headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
       if (confRes.status === 401) {
+        if (isProduction) {
+          return res.status(500).json({ error: 'Payment gateway configuration error (unauthorized token)' });
+        }
         fallbackToMock = true;
       } else {
         // Call the wrapper
@@ -186,6 +205,9 @@ router.post('/withdraw', async (req, res) => {
       }
     } catch (err) {
       console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
+      if (isProduction) {
+        return res.status(500).json({ error: 'Payment gateway communication failure' });
+      }
       fallbackToMock = true;
     }
 

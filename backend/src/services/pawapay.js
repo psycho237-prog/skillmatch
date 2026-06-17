@@ -1,7 +1,19 @@
 require('dotenv').config();
 
-const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || process.env.PAWAPAY_API_KEY || 'sandbox_test_token_placeholder';
-const BASE_URL = 'https://api.sandbox.pawapay.io';
+const isProduction = process.env.PAWAPAY_ENV === 'production';
+const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || process.env.PAWAPAY_API_KEY || (isProduction ? '' : 'sandbox_test_token_placeholder');
+const BASE_URL = process.env.PAWAPAY_BASE_URL || (isProduction ? 'https://api.pawapay.io' : 'https://api.sandbox.pawapay.io');
+
+/**
+ * Determines whether mock fallback mode is active.
+ * Never active in production.
+ */
+function isMockMode() {
+  if (isProduction) {
+    return false;
+  }
+  return !PAWAPAY_API_TOKEN || PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder';
+}
 
 /**
  * Gets HTTP headers for PawaPay API calls.
@@ -30,8 +42,6 @@ async function detectCorrespondent(phone) {
     
     if (response.ok) {
       const data = await response.json();
-      // Returns format e.g. { correspondent: "MTN_MOMO_CMR", currency: "XAF", country: "Cameroon" }
-      // Map return shape properly
       if (data && data.correspondent) {
         return {
           correspondent: data.correspondent,
@@ -56,7 +66,7 @@ async function detectCorrespondent(phone) {
     // Cameroon MTN or Orange
     const isOrange = cleanPhone.startsWith('23769') || cleanPhone.startsWith('237655') || cleanPhone.startsWith('237656') || cleanPhone.startsWith('237657');
     return {
-      correspondent: isOrange ? 'ORANGE_MONEY_CMR' : 'MTN_MOMO_CMR',
+      correspondent: isOrange ? 'ORANGE_CMR' : 'MTN_MOMO_CMR',
       currency: 'XAF',
       country: 'CMR'
     };
@@ -99,19 +109,17 @@ async function detectCorrespondent(phone) {
  */
 async function checkOperatorAvailability(correspondent) {
   try {
-    const response = await fetch(`${BASE_URL}/active-conf`, {
+    const response = await fetch(`${BASE_URL}/v2/active-conf`, {
       method: 'GET',
       headers: getHeaders()
     });
 
     if (!response.ok) {
       console.warn(`PawaPay active-conf returned status: ${response.status}`);
-      // Assume live on sandbox for local developer bypass
       return true;
     }
 
     const data = await response.json();
-    // Verify if correspondent is present in active configurations
     if (Array.isArray(data)) {
       const active = data.some(conf => conf.correspondent === correspondent);
       return active;
@@ -119,7 +127,6 @@ async function checkOperatorAvailability(correspondent) {
     return true;
   } catch (err) {
     console.error('⚠️ PawaPay checkOperatorAvailability failed:', err.message);
-    // Return true on sandbox to avoid blocking dev testing
     return true;
   }
 }
@@ -128,7 +135,7 @@ async function checkOperatorAvailability(correspondent) {
  * Initiates deposit request (payment from client to platform).
  */
 async function initiateDeposit(depositId, phoneNumber, amount, currency, correspondent) {
-  if (PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder') {
+  if (isMockMode()) {
     console.warn('⚠️ PawaPay Deposit mock activated (placeholder token)');
     return { status: 'ACCEPTED', depositId };
   }
@@ -163,7 +170,7 @@ async function initiateDeposit(depositId, phoneNumber, amount, currency, corresp
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !isProduction) {
         console.warn('⚠️ PawaPay Deposit unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', depositId };
       }
@@ -172,8 +179,11 @@ async function initiateDeposit(depositId, phoneNumber, amount, currency, corresp
 
     return data;
   } catch (err) {
-    console.warn('⚠️ PawaPay initiateDeposit error, falling back to mock:', err.message);
-    return { status: 'ACCEPTED', depositId };
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay initiateDeposit error, falling back to mock:', err.message);
+      return { status: 'ACCEPTED', depositId };
+    }
+    throw err;
   }
 }
 
@@ -181,7 +191,7 @@ async function initiateDeposit(depositId, phoneNumber, amount, currency, corresp
  * Initiates payout request (release to provider).
  */
 async function initiatePayout(payoutId, phoneNumber, amount, currency, correspondent) {
-  if (PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder') {
+  if (isMockMode()) {
     console.warn('⚠️ PawaPay Payout mock activated (placeholder token)');
     return { status: 'ACCEPTED', payoutId };
   }
@@ -216,7 +226,7 @@ async function initiatePayout(payoutId, phoneNumber, amount, currency, correspon
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !isProduction) {
         console.warn('⚠️ PawaPay Payout unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', payoutId };
       }
@@ -225,8 +235,11 @@ async function initiatePayout(payoutId, phoneNumber, amount, currency, correspon
 
     return data;
   } catch (err) {
-    console.warn('⚠️ PawaPay initiatePayout error, falling back to mock:', err.message);
-    return { status: 'ACCEPTED', payoutId };
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay initiatePayout error, falling back to mock:', err.message);
+      return { status: 'ACCEPTED', payoutId };
+    }
+    throw err;
   }
 }
 
@@ -234,7 +247,7 @@ async function initiatePayout(payoutId, phoneNumber, amount, currency, correspon
  * Initiates refund request.
  */
 async function initiateRefund(refundId, originalDepositId, amount, currency) {
-  if (PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder') {
+  if (isMockMode()) {
     console.warn('⚠️ PawaPay Refund mock activated (placeholder token)');
     return { status: 'ACCEPTED', refundId };
   }
@@ -262,7 +275,7 @@ async function initiateRefund(refundId, originalDepositId, amount, currency) {
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !isProduction) {
         console.warn('⚠️ PawaPay Refund unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', refundId };
       }
@@ -271,8 +284,11 @@ async function initiateRefund(refundId, originalDepositId, amount, currency) {
 
     return data;
   } catch (err) {
-    console.warn('⚠️ PawaPay initiateRefund error, falling back to mock:', err.message);
-    return { status: 'ACCEPTED', refundId };
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay initiateRefund error, falling back to mock:', err.message);
+      return { status: 'ACCEPTED', refundId };
+    }
+    throw err;
   }
 }
 
@@ -280,7 +296,7 @@ async function initiateRefund(refundId, originalDepositId, amount, currency) {
  * Polls deposit status manually.
  */
 async function pollDepositStatus(depositId) {
-  if (PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder') {
+  if (isMockMode()) {
     return { status: 'COMPLETED', depositId };
   }
 
@@ -291,7 +307,7 @@ async function pollDepositStatus(depositId) {
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !isProduction) {
         return { status: 'COMPLETED', depositId };
       }
       throw new Error(`Polling deposit failed with status ${response.status}`);
@@ -299,8 +315,42 @@ async function pollDepositStatus(depositId) {
 
     return await response.json();
   } catch (err) {
-    console.warn('⚠️ PawaPay pollDepositStatus error, falling back to mock COMPLETED:', err.message);
-    return { status: 'COMPLETED', depositId };
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay pollDepositStatus error, falling back to mock COMPLETED:', err.message);
+      return { status: 'COMPLETED', depositId };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Polls payout (withdrawal) status manually.
+ */
+async function pollPayoutStatus(payoutId) {
+  if (isMockMode()) {
+    return { status: 'COMPLETED', payoutId };
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/v2/payouts/${payoutId}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 && !isProduction) {
+        return { status: 'COMPLETED', payoutId };
+      }
+      throw new Error(`Polling payout failed with status ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (err) {
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay pollPayoutStatus error, falling back to mock COMPLETED:', err.message);
+      return { status: 'COMPLETED', payoutId };
+    }
+    throw err;
   }
 }
 
@@ -308,7 +358,7 @@ async function pollDepositStatus(depositId) {
  * Triggers callback resend for deposit ID.
  */
 async function resendCallback(depositId) {
-  if (PAWAPAY_API_TOKEN === 'sandbox_test_token_placeholder') {
+  if (isMockMode()) {
     return { status: 'SENT', depositId };
   }
 
@@ -319,14 +369,13 @@ async function resendCallback(depositId) {
     });
 
     if (!response.ok) {
-      // Try alternative endpoint format
       const alternateRes = await fetch(`${BASE_URL}/v2/deposits/resend-callback`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ depositId })
       });
       if (!alternateRes.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 && !isProduction) {
           return { status: 'SENT', depositId };
         }
         throw new Error(`Resend callback failed with status ${response.status}`);
@@ -336,8 +385,11 @@ async function resendCallback(depositId) {
 
     return await response.json();
   } catch (err) {
-    console.warn('⚠️ PawaPay resendCallback error, falling back to mock SENT:', err.message);
-    return { status: 'SENT', depositId };
+    if (!isProduction) {
+      console.warn('⚠️ PawaPay resendCallback error, falling back to mock SENT:', err.message);
+      return { status: 'SENT', depositId };
+    }
+    throw err;
   }
 }
 
@@ -348,6 +400,6 @@ module.exports = {
   initiatePayout,
   initiateRefund,
   pollDepositStatus,
+  pollPayoutStatus,
   resendCallback
 };
-

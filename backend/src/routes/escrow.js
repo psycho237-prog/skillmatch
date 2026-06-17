@@ -3,7 +3,9 @@ const router = express.Router();
 const crypto = require('crypto');
 const { query } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
-const pawapay = require('../services/pawapay');
+// NOTE: pawapay is NOT used in escrow routes.
+// PawaPay is called ONLY in wallet.js (deposit top-up & withdrawal to mobile money).
+// All escrow fund movements are instant in-app wallet-to-wallet database operations.
 
 // Helper to determine who is provider vs client
 function getEscrowParties(escrow, service) {
@@ -36,106 +38,102 @@ async function insertSystemMessage(conversationId, content) {
 
 // POST /api/escrow/initiate
 // Body: { serviceId, counterpartyId, conversationId }
+// Creates the escrow record. No PawaPay needed — just sets up the agreement in the DB.
 router.post('/initiate', authenticateToken, async (req, res) => {
   try {
     const { serviceId, counterpartyId, conversationId } = req.body;
     const initiatorId = req.user.id;
 
     if (!serviceId || !counterpartyId || !conversationId) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing required fields: serviceId, counterpartyId, conversationId' });
     }
 
     // Retrieve service details
     const serviceRes = await query('SELECT * FROM services WHERE id = $1 AND deleted_at IS NULL', [serviceId]);
     if (serviceRes.rowCount === 0) {
-      return res.status(404).json({ error: 'Service not found or inactive' });
+      return res.status(404).json({ error: 'Service not found or has been removed' });
     }
     const service = serviceRes.rows[0];
 
-    if (!service.service_type || service.holdup_amount === null) {
-      return res.status(400).json({ error: 'Service is not configured for escrow. Missing serviceType or holdupAmount.' });
+    if (!service.service_type) {
+      return res.status(400).json({ error: 'Service has no service_type configured.' });
+    }
+    if (service.service_type === 'SKILL_TO_SKILL' && (service.holdup_amount === null || service.holdup_amount === undefined)) {
+      return res.status(400).json({ error: 'Skill-to-Skill service is missing holdupAmount.' });
+    }
+    if (service.service_type === 'SKILL_TO_CASH' && (!service.price || service.price <= 0)) {
+      return res.status(400).json({ error: 'Service price is not set.' });
     }
 
-    // Retrieve users profiles
-    const initiatorRes = await query('SELECT * FROM users WHERE id = $1', [initiatorId]);
-    const counterpartyRes = await query('SELECT * FROM users WHERE id = $1', [counterpartyId]);
-    if (initiatorRes.rowCount === 0 || counterpartyRes.rowCount === 0) {
-      return res.status(404).json({ error: 'Initiator or counterparty not found' });
-    }
-    const initiator = initiatorRes.rows[0];
-    const counterparty = counterpartyRes.rows[0];
+    // Verify both users exist
+    const initiatorRes = await query('SELECT id FROM users WHERE id = $1', [initiatorId]);
+    const counterpartyRes = await query('SELECT id FROM users WHERE id = $1', [counterpartyId]);
+    if (initiatorRes.rowCount === 0) return res.status(404).json({ error: 'Initiator not found' });
+    if (counterpartyRes.rowCount === 0) return res.status(404).json({ error: 'Counterparty not found' });
 
-    // Detect correspondents
-    const initiatorDetector = await pawapay.detectCorrespondent(initiator.phone_number);
-    const counterpartyDetector = await pawapay.detectCorrespondent(counterparty.phone_number);
-
-    // Save correspondents on profiles if not already present
-    if (!initiator.correspondent) {
-      await query('UPDATE users SET correspondent = $1, currency = $2, country = $3 WHERE id = $4', [
-        initiatorDetector.correspondent,
-        initiatorDetector.currency,
-        initiatorDetector.country,
-        initiatorId
-      ]);
-    }
-    if (!counterparty.correspondent) {
-      await query('UPDATE users SET correspondent = $1, currency = $2, country = $3 WHERE id = $4', [
-        counterpartyDetector.correspondent,
-        counterpartyDetector.currency,
-        counterpartyDetector.country,
-        counterpartyId
-      ]);
-    }
-
-    // Check operator availability
-    const isInitiatorOperatorLive = await pawapay.checkOperatorAvailability(initiatorDetector.correspondent);
-    const isCounterpartyOperatorLive = await pawapay.checkOperatorAvailability(counterpartyDetector.correspondent);
-
-    if (!isInitiatorOperatorLive || !isCounterpartyOperatorLive) {
-      return res.status(503).json({ error: 'Mobile money operator network degraded. Please try again later.' });
-    }
-
-    // Determine lock amounts
+    // Determine lock amounts based on service type
     let amountInitiator = 0;
     let amountCounterparty = 0;
     const providerId = service.user_id;
+    const price = parseFloat(service.price) || 0;
+    const holdupAmount = parseFloat(service.holdup_amount) || 0;
 
     if (service.service_type === 'SKILL_TO_CASH') {
-      const clientUserId = (initiatorId === providerId) ? counterpartyId : initiatorId;
-      if (initiatorId === clientUserId) {
-        amountInitiator = service.price;
-        amountCounterparty = 0;
-      } else {
+      // Only the buyer (non-provider) locks funds
+      if (initiatorId === providerId) {
+        // Provider initiated — counterparty is the buyer
         amountInitiator = 0;
-        amountCounterparty = service.price;
+        amountCounterparty = price;
+      } else {
+        // Buyer initiated
+        amountInitiator = price;
+        amountCounterparty = 0;
       }
     } else {
-      // SKILL_TO_SKILL both lock holdup_amount
-      amountInitiator = service.holdup_amount;
-      amountCounterparty = service.holdup_amount;
+      // SKILL_TO_SKILL: both lock the holdup amount
+      amountInitiator = holdupAmount;
+      amountCounterparty = holdupAmount;
     }
 
-    const platformFee = service.service_type === 'SKILL_TO_CASH' ? parseFloat(service.price) * 0.05 : 0.00;
+    const platformFee = service.service_type === 'SKILL_TO_CASH' ? parseFloat((price * 0.05).toFixed(2)) : 0.00;
+    const currency = service.currency || 'XAF';
 
-    // Insert escrow
+    // Check for an existing active escrow to prevent duplicates
+    const existingRes = await query(
+      `SELECT id FROM escrows 
+       WHERE service_id = $1 
+         AND ((initiator_id = $2 AND counterparty_id = $3) OR (initiator_id = $3 AND counterparty_id = $2))
+         AND status NOT IN ('COMPLETED', 'CANCELLED', 'REFUNDED', 'FORFEITED')
+       LIMIT 1`,
+      [serviceId, initiatorId, counterpartyId]
+    );
+    if (existingRes.rowCount > 0) {
+      return res.status(409).json({ error: 'An active escrow already exists for this service between these users.', escrowId: existingRes.rows[0].id });
+    }
+
+    // Create the escrow record
     const insertRes = await query(
       `INSERT INTO escrows (
-        type, service_id, initiator_id, counterparty_id, amount_initiator, amount_counterparty, 
+        type, service_id, initiator_id, counterparty_id, amount_initiator, amount_counterparty,
         currency, platform_fee, status, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'AWAITING_COUNTERPARTY', NOW(), NOW()) RETURNING *`,
-      [service.service_type, serviceId, initiatorId, counterpartyId, amountInitiator, amountCounterparty, service.currency || 'XAF', platformFee]
+      [service.service_type, serviceId, initiatorId, counterpartyId, amountInitiator, amountCounterparty, currency, platformFee]
     );
     const escrow = insertRes.rows[0];
 
-    // Add conversation metadata log link
+    // Link conversation to service
     await query('UPDATE conversations SET service_id = $1 WHERE id = $2', [serviceId, conversationId]);
 
-    // Send system message
-    const amountStr = service.service_type === 'SKILL_TO_CASH' ? `${service.price} ${escrow.currency}` : `${service.holdup_amount} ${escrow.currency}`;
-    await insertSystemMessage(
-      conversationId,
-      `🔒 Escrow initiated. Waiting for counterparty to accept. Price/Hold: ${amountStr}`
-    );
+    // System message in chat
+    const amountStr = service.service_type === 'SKILL_TO_CASH'
+      ? `${price} ${currency}`
+      : `${holdupAmount} ${currency} hold each`;
+    const msgText = service.service_type === 'SKILL_TO_CASH'
+      ? `💳 Purchase request sent for "${service.title}" — ${amountStr}. Waiting for provider to accept.`
+      : `🔄 Exchange initiated for "${service.title}" — ${amountStr}. Waiting for counterparty to accept.`;
+    await insertSystemMessage(conversationId, msgText);
+
+    notifyUsers(req, [counterpartyId], 'ESCROW_INITIATED', { escrowId: escrow.id, serviceTitle: service.title });
 
     res.status(201).json({ escrow });
   } catch (error) {
@@ -532,38 +530,38 @@ async function processEscrowPayout(escrow, service) {
 }
 
 // POST /api/escrow/dispute
-// Body: { escrowId, hasProof, proofUrl }
+// SKILL_TO_CASH: only the client can dispute.
+// SKILL_TO_SKILL: either party can dispute from BOTH_LOCKED or PROVIDER_MARKED_DONE.
+// Disputing freezes the locked funds for admin review.
 router.post('/dispute', authenticateToken, async (req, res) => {
   try {
     const { escrowId, hasProof, proofUrl } = req.body;
     const userId = req.user.id;
 
     const escrowRes = await query('SELECT * FROM escrows WHERE id = $1', [escrowId]);
-    if (escrowRes.rowCount === 0) {
-      return res.status(404).json({ error: 'Escrow not found' });
-    }
+    if (escrowRes.rowCount === 0) return res.status(404).json({ error: 'Escrow not found' });
     const escrow = escrowRes.rows[0];
 
     const serviceRes = await query('SELECT * FROM services WHERE id = $1', [escrow.service_id]);
     const service = serviceRes.rows[0];
+    const { clientId, providerId } = getEscrowParties(escrow, service);
 
-    const { clientId } = getEscrowParties(escrow, service);
-
-    if (userId !== clientId) {
-      return res.status(403).json({ error: 'Only the client can open a dispute' });
+    // Authorization: for S2C only client disputes; for S2S either party can
+    const isParty = (userId === clientId || userId === providerId);
+    if (!isParty) return res.status(403).json({ error: 'You are not a party to this escrow' });
+    if (escrow.type === 'SKILL_TO_CASH' && userId !== clientId) {
+      return res.status(403).json({ error: 'Only the buyer can open a dispute for a cash-for-skill transaction' });
     }
 
-    if (escrow.status !== 'PROVIDER_MARKED_DONE' && escrow.status !== 'BOTH_LOCKED') {
-      return res.status(400).json({ error: 'Dispute can only be opened when service is locked or delivered' });
+    const allowedStatuses = ['BOTH_LOCKED', 'PROVIDER_MARKED_DONE'];
+    if (!allowedStatuses.includes(escrow.status)) {
+      return res.status(400).json({ error: `Dispute can only be opened when escrow is in BOTH_LOCKED or PROVIDER_MARKED_DONE state. Current: ${escrow.status}` });
     }
 
-    let status = 'DISPUTED';
-    let autoResolveAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h auto-resolve (forfeit)
-
-    if (!hasProof) {
-      status = 'DISPUTE_NO_PROOF';
-      autoResolveAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h auto-resolve (provider wins)
-    }
+    const status = hasProof ? 'DISPUTED' : 'DISPUTE_NO_PROOF';
+    const autoResolveAt = hasProof
+      ? new Date(Date.now() + 72 * 60 * 60 * 1000) // 72h with proof — admin reviews
+      : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h without proof — provider wins
 
     await query(
       `UPDATE escrows 
@@ -572,17 +570,21 @@ router.post('/dispute', authenticateToken, async (req, res) => {
       [status, autoResolveAt, proofUrl || null, escrowId]
     );
 
-    // Insert system message in chat
-    const convRes = await query('SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))', [
-      escrow.service_id, escrow.initiator_id, escrow.counterparty_id
-    ]);
+    // System message in chat
+    const convRes = await query(
+      'SELECT id FROM conversations WHERE service_id = $1 AND ((user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2))',
+      [escrow.service_id, escrow.initiator_id, escrow.counterparty_id]
+    );
     if (convRes.rowCount > 0) {
-      await insertSystemMessage(convRes.rows[0].id, `⚠️ Dispute opened — ${hasProof ? '72h freeze' : '24h auto-resolve'}`);
+      await insertSystemMessage(
+        convRes.rows[0].id,
+        `⚠️ Dispute opened — ${hasProof ? 'proof submitted, 72h admin review' : 'no proof, 24h auto-resolve (provider wins)'}. Funds remain locked.`
+      );
     }
 
     notifyUsers(req, [escrow.initiator_id, escrow.counterparty_id], 'DISPUTED', { escrowId, status });
 
-    res.json({ message: 'Dispute logged successfully.', status, autoResolveAt });
+    res.json({ message: 'Dispute logged. Funds remain locked pending admin review.', status, autoResolveAt });
   } catch (error) {
     console.error('Log dispute error:', error);
     res.status(500).json({ error: 'Failed to file dispute' });

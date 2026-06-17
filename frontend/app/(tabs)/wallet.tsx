@@ -59,10 +59,8 @@ export default function WalletScreen() {
     if (!referenceId) return;
     try {
       setVerifyingId(referenceId);
-      const txType = type === 'deposit' ? 'deposit' : 'withdrawal';
-      await api.simulateWebhook(referenceId, txType, 'COMPLETED');
-      Alert.alert('Success', 'Transaction verified and wallet balance updated!');
-      fetchWalletData();
+      await fetchWalletData();
+      Alert.alert('Success', 'Transaction status refreshed from the network.');
     } catch (err: any) {
       console.log('Verification failed:', err);
       Alert.alert('Verification Failed', err.message || 'Verification failed. Try again.');
@@ -97,15 +95,14 @@ export default function WalletScreen() {
       setAmount('');
       
       if (transactionId) {
-        // Automatically verify in background after 1.5 seconds to simulate webhook callback
+        // Automatically check live PawaPay status after 2 seconds
         setTimeout(async () => {
           try {
-            await api.simulateWebhook(transactionId, modalType, 'COMPLETED');
-            fetchWalletData();
+            await fetchWalletData();
           } catch (err) {
             console.log('Background verification failed:', err);
           }
-        }, 1500);
+        }, 2000);
       }
       
       Alert.alert(

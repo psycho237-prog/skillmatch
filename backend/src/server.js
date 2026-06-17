@@ -86,7 +86,7 @@ runMigrations()
       } catch (err) {
         console.error('❌ Failed to initialize Baileys:', err);
       }
-      startCronScheduler();
+      startCronScheduler(io);
     });
   })
   .catch((err) => {
@@ -99,7 +99,7 @@ runMigrations()
       } catch (err) {
         console.error('❌ Failed to initialize Baileys:', err);
       }
-      startCronScheduler();
+      startCronScheduler(io);
     });
   });
 
