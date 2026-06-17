@@ -49,6 +49,15 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -102,6 +111,9 @@
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
-    "owner": "bridge_abre"
+    "owner": "bridge_abre",
+    "updates": {
+      "url": "https://u.expo.dev/945a8eb7-010e-4cd6-bf4b-f8539b274bb6"
+    }
   }
 }
