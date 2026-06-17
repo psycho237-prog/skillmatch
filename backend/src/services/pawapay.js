@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const isProduction = process.env.PAWAPAY_ENV === 'production';
-const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || process.env.PAWAPAY_API_KEY || (isProduction ? '' : 'sandbox_test_token_placeholder');
+const PAWAPAY_API_TOKEN = process.env.PAWAPAY_API_TOKEN || process.env.PAWAPAY_API_KEY || process.env.PAYMENT_API_TOKEN || (isProduction ? '' : 'sandbox_test_token_placeholder');
 const BASE_URL = process.env.PAWAPAY_BASE_URL || (isProduction ? 'https://api.pawapay.io' : 'https://api.sandbox.pawapay.io');
 
 /**
@@ -170,7 +170,7 @@ async function initiateDeposit(depositId, phoneNumber, amount, currency, corresp
     }
 
     if (!response.ok) {
-      if (response.status === 401 && !isProduction) {
+      if (response.status === 401 && isMockMode()) {
         console.warn('⚠️ PawaPay Deposit unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', depositId };
       }
@@ -179,7 +179,7 @@ async function initiateDeposit(depositId, phoneNumber, amount, currency, corresp
 
     return data;
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay initiateDeposit error, falling back to mock:', err.message);
       return { status: 'ACCEPTED', depositId };
     }
@@ -226,7 +226,7 @@ async function initiatePayout(payoutId, phoneNumber, amount, currency, correspon
     }
 
     if (!response.ok) {
-      if (response.status === 401 && !isProduction) {
+      if (response.status === 401 && isMockMode()) {
         console.warn('⚠️ PawaPay Payout unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', payoutId };
       }
@@ -235,7 +235,7 @@ async function initiatePayout(payoutId, phoneNumber, amount, currency, correspon
 
     return data;
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay initiatePayout error, falling back to mock:', err.message);
       return { status: 'ACCEPTED', payoutId };
     }
@@ -275,7 +275,7 @@ async function initiateRefund(refundId, originalDepositId, amount, currency) {
     }
 
     if (!response.ok) {
-      if (response.status === 401 && !isProduction) {
+      if (response.status === 401 && isMockMode()) {
         console.warn('⚠️ PawaPay Refund unauthorized (401). Falling back to mock.');
         return { status: 'ACCEPTED', refundId };
       }
@@ -284,7 +284,7 @@ async function initiateRefund(refundId, originalDepositId, amount, currency) {
 
     return data;
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay initiateRefund error, falling back to mock:', err.message);
       return { status: 'ACCEPTED', refundId };
     }
@@ -307,7 +307,7 @@ async function pollDepositStatus(depositId) {
     });
 
     if (!response.ok) {
-      if (response.status === 401 && !isProduction) {
+      if (response.status === 401 && isMockMode()) {
         return { status: 'COMPLETED', depositId };
       }
       throw new Error(`Polling deposit failed with status ${response.status}`);
@@ -315,7 +315,7 @@ async function pollDepositStatus(depositId) {
 
     return await response.json();
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay pollDepositStatus error, falling back to mock COMPLETED:', err.message);
       return { status: 'COMPLETED', depositId };
     }
@@ -338,7 +338,7 @@ async function pollPayoutStatus(payoutId) {
     });
 
     if (!response.ok) {
-      if (response.status === 401 && !isProduction) {
+      if (response.status === 401 && isMockMode()) {
         return { status: 'COMPLETED', payoutId };
       }
       throw new Error(`Polling payout failed with status ${response.status}`);
@@ -346,7 +346,7 @@ async function pollPayoutStatus(payoutId) {
 
     return await response.json();
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay pollPayoutStatus error, falling back to mock COMPLETED:', err.message);
       return { status: 'COMPLETED', payoutId };
     }
@@ -375,7 +375,7 @@ async function resendCallback(depositId) {
         body: JSON.stringify({ depositId })
       });
       if (!alternateRes.ok) {
-        if (response.status === 401 && !isProduction) {
+        if (response.status === 401 && isMockMode()) {
           return { status: 'SENT', depositId };
         }
         throw new Error(`Resend callback failed with status ${response.status}`);
@@ -385,7 +385,7 @@ async function resendCallback(depositId) {
 
     return await response.json();
   } catch (err) {
-    if (!isProduction) {
+    if (isMockMode()) {
       console.warn('⚠️ PawaPay resendCallback error, falling back to mock SENT:', err.message);
       return { status: 'SENT', depositId };
     }

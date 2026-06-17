@@ -7,8 +7,9 @@ const pawapay = require('../services/pawapay');
 const { reconcilePendingTransactions } = require('../services/walletReconciler');
 
 const isProduction = process.env.PAWAPAY_ENV === 'production';
-const PAWAPAY_TOKEN = process.env.PAWAPAY_API_KEY || process.env.PAWAPAY_API_TOKEN || 'eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzE4NDAzMSwiaWF0IjoxNzgxNTY0ODMxLCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0ZTgwZWU0NS0zNTJkLTRjYzMtOGY4My03MmJkZjViMjkyNjYifQ.8xYbS6zbVuYRi8_FGEmsvmGg-KjxRDbNafk9iu8MxqRytL2s3l3Zk332KLZBidRYIt_fLmo0eOvqGkvsXRG2aQ';
+const PAWAPAY_TOKEN = process.env.PAWAPAY_API_KEY || process.env.PAWAPAY_API_TOKEN || process.env.PAYMENT_API_TOKEN || 'eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJ0dCI6IkFBVCIsInN1YiI6IjIyNDUyIiwibWF2IjoiMSIsImV4cCI6MjA5NzEzNjU3NywiaWF0IjoxNzgxNTE3Mzc3LCJwbSI6IkRBRixQQUYiLCJqdGkiOiI0OTk2OGRmMS0wY2IzLTRhYmQtYWU3OS00ODNiODQ5ZDFiMGYifQ.eKitlpRdi_S02_OuSwDuYas1mCeysrGfn9Xv3yieNGRgfVK8kJL2l7Vq5KnWg0qn_fF43R1mrbpVRYAOgsOIMw';
 const PAWAPAY_BASE_URL = process.env.PAWAPAY_BASE_URL || (isProduction ? 'https://api.pawapay.io' : 'https://api.sandbox.pawapay.io');
+const isMockMode = !process.env.PAWAPAY_API_KEY && !process.env.PAWAPAY_API_TOKEN && !process.env.PAYMENT_API_TOKEN;
 const { authenticateToken } = require('../middleware/auth');
 
 router.use(authenticateToken);
@@ -93,8 +94,8 @@ router.post('/deposit', async (req, res) => {
         headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
       if (confRes.status === 401) {
-        if (isProduction) {
-          return res.status(500).json({ error: 'Payment gateway configuration error (unauthorized token)' });
+        if (isProduction || !isMockMode) {
+          return res.status(401).json({ error: 'Payment gateway configuration error (unauthorized token)' });
         }
         fallbackToMock = true;
       } else {
@@ -111,9 +112,9 @@ router.post('/deposit', async (req, res) => {
         }
       }
     } catch (err) {
-      console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
-      if (isProduction) {
-        return res.status(500).json({ error: 'Payment gateway communication failure' });
+      console.warn('⚠️ PawaPay error:', err.message);
+      if (isProduction || !isMockMode) {
+        return res.status(500).json({ error: 'Payment gateway communication failure: ' + err.message });
       }
       fallbackToMock = true;
     }
@@ -186,8 +187,8 @@ router.post('/withdraw', async (req, res) => {
         headers: { 'Authorization': `Bearer ${PAWAPAY_TOKEN}` }
       });
       if (confRes.status === 401) {
-        if (isProduction) {
-          return res.status(500).json({ error: 'Payment gateway configuration error (unauthorized token)' });
+        if (isProduction || !isMockMode) {
+          return res.status(401).json({ error: 'Payment gateway configuration error (unauthorized token)' });
         }
         fallbackToMock = true;
       } else {
@@ -204,9 +205,9 @@ router.post('/withdraw', async (req, res) => {
         }
       }
     } catch (err) {
-      console.warn('⚠️ PawaPay error, falling back to mock:', err.message);
-      if (isProduction) {
-        return res.status(500).json({ error: 'Payment gateway communication failure' });
+      console.warn('⚠️ PawaPay error:', err.message);
+      if (isProduction || !isMockMode) {
+        return res.status(500).json({ error: 'Payment gateway communication failure: ' + err.message });
       }
       fallbackToMock = true;
     }
