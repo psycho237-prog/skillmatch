@@ -15,6 +15,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { ServiceCard } from '../../src/components/ServiceCard';
 import { Loader } from '../../src/components/Loader';
+import { AnimatedSearchPlaceholder } from '../../src/components/AnimatedSearchPlaceholder';
 import { icons } from '../../src/constants';
 import { api, resolveImageUrl } from '../../src/services/api';
 
@@ -267,9 +268,20 @@ export default function Home() {
             <View style={[styles.searchRow, { paddingTop: 10 }]}>
               <View style={[styles.searchBar, { backgroundColor: colors.inputBg }]}>
                 <Image source={icons.search} style={[styles.searchIcon, { tintColor: colors.black2 }]} />
+                <AnimatedSearchPlaceholder 
+                  show={searchQuery.length === 0} 
+                  colors={colors} 
+                  phrases={[
+                    t('search_placeholder') as string || 'Search...',
+                    (t('development') as string || 'Development') + '...',
+                    (t('design') as string || 'Design') + '...',
+                    (t('cleaning') as string || 'Cleaning') + '...',
+                    (t('beauty') as string || 'Beauty') + '...'
+                  ]} 
+                />
                 <TextInput
-                  style={[styles.searchInput, { color: colors.black1 }]}
-                  placeholder={t('search_placeholder')}
+                  style={[styles.searchInput, { color: colors.black1, flex: 1 }]}
+                  placeholder=""
                   placeholderTextColor={colors.black3}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
