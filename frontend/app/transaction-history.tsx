@@ -84,14 +84,17 @@ export default function TransactionHistoryScreen() {
   };
 
   const getTxIcon = (type: string) => {
+    let iconSource;
+    let tintColor = colors.primary;
     switch (type) {
-      case 'DEPOSIT': return '📥';
-      case 'PAYOUT': return '📤';
-      case 'REFUND': return '🔄';
-      case 'FEE': return '⚙️';
-      case 'ARBITRATION': return '⚖️';
-      default: return '💰';
+      case 'DEPOSIT': iconSource = icons.wallet; break;
+      case 'PAYOUT': iconSource = icons.send; tintColor = colors.danger; break;
+      case 'REFUND': iconSource = icons.backArrow; break;
+      case 'FEE': iconSource = icons.wallet; tintColor = colors.black2; break;
+      case 'ARBITRATION': iconSource = icons.shield; tintColor = colors.danger; break;
+      default: iconSource = icons.wallet; break;
     }
+    return <Image source={iconSource} style={{ width: 28, height: 28, tintColor }} />;
   };
 
   const getStatusColor = (status: string) => {
@@ -111,10 +114,10 @@ export default function TransactionHistoryScreen() {
   };
 
   const filters = [
-    { label: 'ALL', value: 'ALL' },
-    { label: 'DEPOSITS', value: 'DEPOSIT' },
-    { label: 'PAYOUTS', value: 'PAYOUT' },
-    { label: 'REFUNDS', value: 'REFUND' }
+    { label: t('all_caps'), value: 'ALL' },
+    { label: t('deposits_caps'), value: 'DEPOSIT' },
+    { label: t('payouts_caps'), value: 'PAYOUT' },
+    { label: t('refunds_caps'), value: 'REFUND' }
   ];
 
   return (
@@ -122,9 +125,9 @@ export default function TransactionHistoryScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Typography variant="body1" color={colors.primary}>&lt; Back</Typography>
+          <Typography variant="body1" color={colors.primary}>&lt; {t('close')}</Typography>
         </TouchableOpacity>
-        <Typography variant="h4">Transaction History</Typography>
+        <Typography variant="h4">{t('recent_transactions')}</Typography>
         <View style={styles.placeholder} />
       </View>
 
@@ -134,11 +137,11 @@ export default function TransactionHistoryScreen() {
           <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryCol}>
-                <Typography variant="caption" color={colors.black3}>Total Earned</Typography>
+                <Typography variant="caption" color={colors.black3}>{t('total_earned')}</Typography>
                 <Typography variant="h4" color={colors.primary}>{summary.totalEarned} {summary.currency}</Typography>
               </View>
               <View style={styles.summaryCol}>
-                <Typography variant="caption" color={colors.black3}>Total Spent</Typography>
+                <Typography variant="caption" color={colors.black3}>{t('total_spent')}</Typography>
                 <Typography variant="h4" color={colors.danger}>{summary.totalSpent} {summary.currency}</Typography>
               </View>
             </View>
@@ -146,15 +149,15 @@ export default function TransactionHistoryScreen() {
             <View style={styles.summaryRow}>
               <View style={styles.statCol}>
                 <Typography variant="h5">{summary.activeEscrows}</Typography>
-                <Typography variant="caption" color={colors.black3}>Active Escrows</Typography>
+                <Typography variant="caption" color={colors.black3}>{t('active_escrows')}</Typography>
               </View>
               <View style={styles.statCol}>
                 <Typography variant="h5">{summary.completedDeals}</Typography>
-                <Typography variant="caption" color={colors.black3}>Deals Done</Typography>
+                <Typography variant="caption" color={colors.black3}>{t('deals_done')}</Typography>
               </View>
               <View style={styles.statCol}>
                 <Typography variant="h5">{summary.disputes}</Typography>
-                <Typography variant="caption" color={colors.black3}>Disputes</Typography>
+                <Typography variant="caption" color={colors.black3}>{t('disputes')}</Typography>
               </View>
             </View>
           </View>
@@ -193,10 +196,10 @@ export default function TransactionHistoryScreen() {
             return (
               <View style={[styles.txCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.txHeader}>
-                  <Typography variant="h3" style={styles.txIcon}>{getTxIcon(item.type)}</Typography>
+                  <View style={styles.txIcon}>{getTxIcon(item.type)}</View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Typography variant="h6" weight="bold">
-                      {item.type} {item.escrow ? `(${item.escrow.type === 'SKILL_TO_CASH' ? 'Cash-for-Skill' : 'Skill-for-Skill'})` : ''}
+                      {t(`tx_type_${item.type.toLowerCase()}`) || item.type} {item.escrow ? `(${item.escrow.type === 'SKILL_TO_CASH' ? t('cash_for_skill') : t('skill_for_skill')})` : ''}
                     </Typography>
                     <Typography variant="caption" color={colors.black3}>{formatTime(item.createdAt)}</Typography>
                   </View>
@@ -227,19 +230,19 @@ export default function TransactionHistoryScreen() {
 
                 {item.pawapayRef && (
                   <Typography variant="caption" color={colors.black3} style={styles.refText}>
-                    Ref ID: {item.pawapayRef}
+                    {t('ref_id')} {item.pawapayRef}
                   </Typography>
                 )}
 
                 {item.platformFee > 0 && (
                   <Typography variant="caption" color={colors.primary} style={styles.feeText}>
-                    Platform fee: {item.platformFee} {item.currency}
+                    {t('platform_fee')} {item.platformFee} {item.currency}
                   </Typography>
                 )}
 
                 <View style={styles.txFooter}>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
-                    <Typography variant="caption" color={getStatusColor(item.status)} weight="bold">{item.status}</Typography>
+                    <Typography variant="caption" color={getStatusColor(item.status)} weight="bold">{t(`status_${item.status.toLowerCase()}`) || item.status}</Typography>
                   </View>
 
                   <View style={{ flexDirection: 'row' }}>
@@ -248,7 +251,7 @@ export default function TransactionHistoryScreen() {
                         style={[styles.actionBtn, { backgroundColor: colors.primary, marginRight: 8 }]}
                         onPress={() => handleOpenRating(item.escrow.id, item.counterparty?.id, item.counterparty?.name)}
                       >
-                        <Typography variant="caption" color="white" weight="bold">Rate Now</Typography>
+                        <Typography variant="caption" color="white" weight="bold">{t('rate_now')}</Typography>
                       </TouchableOpacity>
                     )}
 
@@ -258,7 +261,7 @@ export default function TransactionHistoryScreen() {
                         onPress={() => toggleExpand(item.transactionId)}
                       >
                         <Typography variant="caption" color={colors.primary} weight="bold">
-                          {isExpanded ? 'Hide Details' : 'View Timeline'}
+                          {isExpanded ? t('hide_details') : t('view_timeline')}
                         </Typography>
                       </TouchableOpacity>
                     )}
@@ -268,7 +271,7 @@ export default function TransactionHistoryScreen() {
                 {/* Expanded Timeline details */}
                 {isExpanded && item.escrow && (
                   <View style={[styles.timelineContainer, { borderTopColor: colors.border }]}>
-                    <Typography variant="body2" weight="bold" style={{ marginBottom: 12 }}>Escrow Event Timeline</Typography>
+                    <Typography variant="body2" weight="bold" style={{ marginBottom: 12 }}>{t('view_timeline')}</Typography>
                     {item.escrow.timeline.filter((ev: any) => ev.at).map((ev: any, idx: number) => (
                       <View key={idx} style={styles.timelineRow}>
                         <View style={styles.timelineIndicator}>
@@ -288,7 +291,7 @@ export default function TransactionHistoryScreen() {
           }}
           ListEmptyComponent={
             <View style={{ padding: 40, alignItems: 'center' }}>
-              <Typography variant="body1" color={colors.black3}>No transactions found.</Typography>
+              <Typography variant="body1" color={colors.black3}>{t('no_transactions')}</Typography>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -299,9 +302,9 @@ export default function TransactionHistoryScreen() {
       <Modal visible={ratingModalVisible} transparent animationType="slide" onRequestClose={handleSkipRating}>
         <Pressable style={styles.modalOverlay} onPress={handleSkipRating}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Typography variant="h4" style={{ marginBottom: 12 }}>Rate {ratingRevieweeName}</Typography>
+            <Typography variant="h4" style={{ marginBottom: 12 }}>{t('rate_user', { name: ratingRevieweeName })}</Typography>
             <Typography variant="body2" color={colors.black2} style={{ marginBottom: 20 }}>
-              Share your feedback for your transaction. Select star score and comment.
+              {t('rate_desc')}
             </Typography>
 
             {/* Stars selection */}
@@ -316,7 +319,7 @@ export default function TransactionHistoryScreen() {
             </View>
 
             {/* Comment field */}
-            <Typography variant="body2" weight="bold" style={{ marginBottom: 8, marginTop: 16 }}>Comments (Optional)</Typography>
+            <Typography variant="body2" weight="bold" style={{ marginBottom: 8, marginTop: 16 }}>{t('comments_optional')}</Typography>
             <View style={[styles.inputGroup, styles.textAreaGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TextInput
                 placeholder="Describe your experience..."
@@ -335,10 +338,10 @@ export default function TransactionHistoryScreen() {
                 style={[styles.modalBtn, { borderColor: colors.border, borderWidth: 1 }]} 
                 onPress={handleSkipRating}
               >
-                <Typography variant="body2" color={colors.black2}>Skip</Typography>
+                <Typography variant="body2" color={colors.black2}>{t('skip')}</Typography>
               </TouchableOpacity>
               <Button 
-                title="Submit" 
+                title={t('submit')} 
                 onPress={handleSubmitRating} 
                 loading={submittingRating}
                 style={{ flex: 1, marginLeft: 12 }}
@@ -354,7 +357,7 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
     flexDirection: 'row',
@@ -364,7 +367,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 80 },
   placeholder: { width: 80 },
-  summaryContainer: { padding: 24 },
+  summaryContainer: { padding: 4 },
   summaryCard: {
     padding: 20,
     borderRadius: 24,
@@ -379,7 +382,7 @@ const styles = StyleSheet.create({
   summaryCol: { alignItems: 'center' },
   statCol: { alignItems: 'center' },
   divider: { height: 1, marginVertical: 12 },
-  filterBar: { paddingHorizontal: 24, marginBottom: 16 },
+  filterBar: { paddingHorizontal: 4, marginBottom: 16 },
   filterTab: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -389,7 +392,7 @@ const styles = StyleSheet.create({
   },
   centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   txCard: {
-    marginHorizontal: 24,
+    marginHorizontal: 4,
     marginBottom: 16,
     borderRadius: 20,
     borderWidth: 1,
@@ -437,12 +440,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 4,
   },
   modalContent: {
     width: '100%',
     borderRadius: 24,
-    padding: 24,
+    padding: 4,
   },
   starContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
   starIcon: { fontSize: 40 },

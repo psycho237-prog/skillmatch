@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
+  Animated,
   StyleSheet,
   ScrollView,
   Image,
@@ -9,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { ServiceCard } from '../../src/components/ServiceCard';
@@ -19,6 +21,7 @@ import { api, resolveImageUrl } from '../../src/services/api';
 export default function Home() {
   const { colors, t, user, notifications } = useApp();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
 
   const [featured, setFeatured] = useState<any[]>([]);
@@ -99,146 +102,270 @@ export default function Home() {
     greetingKey = 'good_afternoon';
   }
 
+  const compositeFeed = useMemo(() => {
+    if (!recommended || recommended.length === 0) return [];
+
+    const boostedPool = featured.filter(s => s.is_featured);
+    const premiumPool = recommended.filter(s => s.users?.subscription_tier === 'premium' && !s.is_featured);
+    const starPool = recommended.filter(s => s.rating > 2 && s.users?.subscription_tier !== 'premium' && !s.is_featured);
+    
+    let regularList = recommended.filter(s => 
+      !s.is_featured && s.users?.subscription_tier !== 'premium' && (s.rating == null || s.rating <= 2)
+    );
+    if (regularList.length === 0) regularList = [...recommended];
+
+    const feed = [];
+    const totalSlots = Math.max(10, regularList.length);
+
+    let bIdx = 0, pIdx = 0, sIdx = 0, rIdx = 0;
+
+    for (let i = 1; i <= totalSlots; i++) {
+      let injected = false;
+      
+      if (i % 2 === 0 && bIdx < boostedPool.length) {
+        feed.push({ type: 'service', item: boostedPool[bIdx++] });
+        injected = true;
+      } else if (i % 6 === 0 && pIdx < premiumPool.length) {
+        feed.push({ type: 'service', item: premiumPool[pIdx++] });
+        injected = true;
+      } else if (i % 10 === 0 && sIdx < starPool.length) {
+        feed.push({ type: 'service', item: starPool[sIdx++] });
+        injected = true;
+      }
+      
+      if (i === Math.floor(totalSlots * 0.6)) {
+        feed.push({ type: 'featured_slider_repeat' });
+      }
+
+      if (!injected && rIdx < regularList.length) {
+        feed.push({ type: 'service', item: regularList[rIdx++] });
+      }
+    }
+
+    while (rIdx < regularList.length) {
+      feed.push({ type: 'service', item: regularList[rIdx++] });
+    }
+
+    return feed;
+  }, [recommended, featured]);
+
+  const renderFeaturedSlider = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Typography variant="h4">{t('featured') || 'Featured'}</Typography>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+          <Typography variant="body2" color={colors.primary} weight="medium">{t('see_all') || 'See All'}</Typography>
+        </TouchableOpacity>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+        {featured.map((item) => (
+          <ServiceCard
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            location={item.location}
+            price={item.price}
+            currency={item.currency}
+            priceType={item.price_type}
+            rating={item.rating}
+            imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
+            variant="vertical"
+            isFavorited={!!item.is_favorited}
+            onToggleFavorite={() => handleToggleFavorite(item.id)}
+            holdupAmount={item.holdup_amount}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const isHeaderHidden = useRef(false);
+  const HEADER_HIDE_HEIGHT = 68; // padding(10) + avatar(40) + margin(18)
+
+  const handleScroll = (e: any) => {
+    const currentScrollY = e.nativeEvent.contentOffset.y;
+    if (currentScrollY < 0) return; // Ignore bounce
+
+    const diff = currentScrollY - lastScrollY.current;
+    
+    // Scrolling down -> hide
+    if (diff > 5 && !isHeaderHidden.current) {
+      isHeaderHidden.current = true;
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 300, // Soft transition
+        useNativeDriver: false,
+      }).start();
+    } 
+    // Scrolling up -> show
+    else if (diff < -5 && isHeaderHidden.current) {
+      isHeaderHidden.current = false;
+      Animated.timing(headerAnim, {
+        toValue: 0,
+        duration: 300, // Soft transition
+        useNativeDriver: false,
+      }).start();
+    }
+    
+    lastScrollY.current = currentScrollY;
+  };
+
+  const headerTranslateY = headerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -HEADER_HIDE_HEIGHT],
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      
+      {/* Solid Status Bar Background to prevent content overlap during scroll */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: colors.background, zIndex: 101 }} />
 
-        {/* Header Profile Area */}
-        <View style={styles.header}>
-          <View style={styles.profileInfo}>
-            <Image
-              source={{ uri: resolveImageUrl(user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp') }}
-              style={styles.avatar}
-            />
-            <View style={styles.greeting}>
-              <Typography variant="caption" color={colors.black3}>{t(greetingKey as TranslationKey)}</Typography>
-              <Typography variant="h5" color={colors.black1}>{user?.display_name || 'Guest'}</Typography>
+      {/* Animated Header Overlay */}
+      <Animated.View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        zIndex: 100, 
+        transform: [{ translateY: headerTranslateY }],
+        backgroundColor: colors.background 
+      }}>
+        <View style={[styles.stickyHeader, { paddingTop: insets.top + 10 }]}>
+          {/* Profile Header */}
+          <View style={styles.header}>
+            <View style={styles.profileInfo}>
+              <Image
+                source={{ uri: resolveImageUrl(user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp') }}
+                style={styles.avatar}
+              />
+              <View style={styles.greeting}>
+                <Typography variant="caption" color={colors.black3}>{t(greetingKey as any)}</Typography>
+                <Typography variant="h5" color={colors.black1}>{user?.display_name || 'Guest'}</Typography>
+              </View>
             </View>
+            <TouchableOpacity 
+              style={[styles.bellBtn, { borderColor: colors.border }]}
+              onPress={() => router.push('/notifications')}
+            >
+              <Image source={icons.bell} style={[styles.bellIcon, { tintColor: colors.black1 }]} />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+                  <Typography variant="caption" color="white" weight="bold" style={styles.badgeText}>
+                    {notifications.filter(n => !n.read).length}
+                  </Typography>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={[styles.bellBtn, { borderColor: colors.border }]}
-            onPress={() => router.push('/notifications')}
-          >
-            <Image source={icons.bell} style={[styles.bellIcon, { tintColor: colors.black1 }]} />
-            {notifications.filter(n => !n.read).length > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-                <Typography variant="caption" color="white" weight="bold" style={styles.badgeText}>
-                  {notifications.filter(n => !n.read).length}
-                </Typography>
+
+          {/* Search Row and Categories */}
+          <View style={{ backgroundColor: colors.background }}>
+            <View style={[styles.searchRow, { paddingTop: 10 }]}>
+              <View style={[styles.searchBar, { backgroundColor: colors.inputBg }]}>
+                <Image source={icons.search} style={[styles.searchIcon, { tintColor: colors.black2 }]} />
+                <TextInput
+                  style={[styles.searchInput, { color: colors.black1 }]}
+                  placeholder={t('search_placeholder')}
+                  placeholderTextColor={colors.black3}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={handleSearchSubmit}
+                  returnKeyType="search"
+                />
+              </View>
+              <TouchableOpacity style={[styles.filterBtn, { backgroundColor: colors.primary }]}>
+                <Image source={icons.filter} style={[styles.filterIcon, { tintColor: '#FFF' }]} />
+              </TouchableOpacity>
+            </View>
+
+            {!loading && (
+              <View style={{ paddingVertical: 10, marginHorizontal: -4, paddingHorizontal: 4 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.categoryScroll, { marginBottom: 0 }]}>
+                  {categories.map((cat, idx) => {
+                    const isActive = activeCategory === cat.name;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[
+                          styles.catPill,
+                          { backgroundColor: isActive ? colors.primary : colors.inputBg }
+                        ]}
+                        onPress={() => setActiveCategory(cat.name)}
+                      >
+                        <Typography
+                          variant="body2"
+                          weight="medium"
+                          color={isActive ? '#FFF' : colors.black2}
+                        >
+                          {t((cat.name.toLowerCase()) as any) || cat.name}
+                        </Typography>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
             )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchRow}>
-          <View style={[styles.searchBar, { backgroundColor: colors.inputBg }]}>
-            <Image source={icons.search} style={[styles.searchIcon, { tintColor: colors.black2 }]} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.black1 }]}
-              placeholder={t('search_placeholder')}
-              placeholderTextColor={colors.black3}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearchSubmit}
-              returnKeyType="search"
-            />
           </View>
-          <TouchableOpacity style={[styles.filterBtn, { backgroundColor: colors.primary }]}>
-            <Image source={icons.filter} style={[styles.filterIcon, { tintColor: '#FFF' }]} />
-          </TouchableOpacity>
         </View>
+      </Animated.View>
 
-        {loading && <Loader />}
-        {!loading /*&& featured.length > 0*/ && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Typography variant="h4">{t('featured')}</Typography>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-                <Typography variant="body2" color={colors.primary} weight="medium">{t('see_all')}</Typography>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-              {featured.map((item) => (
-                <ServiceCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  location={item.location}
-                  price={item.price}
-                  currency={item.currency}
-                  priceType={item.price_type}
-                  rating={item.rating}
-                  imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
-                  variant="vertical"
-                  isFavorited={!!item.is_favorited}
-                  onToggleFavorite={() => handleToggleFavorite(item.id)}
-                  holdupAmount={item.holdup_amount}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 270 }]} 
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        <View>
+          {loading ? <Loader /> : (
+            <>
+              {featured.length > 0 && renderFeaturedSlider()}
 
-        {/* Categories / Recommendation Header */}
-        {!loading && (
-          <View style={[styles.section, { flex: 1, marginBottom: 0 }]}>
-            <View style={styles.sectionHeader}>
-              <Typography variant="h4">{t('our_recommendation')}</Typography>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-                <Typography variant="body2" color={colors.primary} weight="medium">{t('see_all')}</Typography>
-              </TouchableOpacity>
-            </View>
-
-            {/* Category Pills */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-              {categories.map((cat, idx) => {
-                const isActive = activeCategory === cat.name;
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.catPill,
-                      { backgroundColor: isActive ? colors.primary : colors.inputBg }
-                    ]}
-                    onPress={() => setActiveCategory(cat.name)}
-                  >
-                    <Typography
-                      variant="body2"
-                      weight="medium"
-                      color={isActive ? '#FFF' : colors.black2}
-                    >
-                      {t((cat.name.toLowerCase()) as any) || cat.name}
-                    </Typography>
+              <View style={[styles.section, { flex: 1, marginTop: 10 }]}>
+                <View style={styles.sectionHeader}>
+                  <Typography variant="h4">{t('our_recommendation') || 'Our Recommendation'}</Typography>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+                    <Typography variant="body2" color={colors.primary} weight="medium">{t('see_all') || 'See All'}</Typography>
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                </View>
 
-            {/* Recommendations List */}
-            <View style={styles.grid}>
-              {recommended.map((item) => (
-                <ServiceCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  location={item.location}
-                  price={item.price}
-                  currency={item.currency}
-                  priceType={item.price_type}
-                  rating={item.rating}
-                  imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
-                  variant="horizontal"
-                  isFavorited={!!item.is_favorited}
-                  onToggleFavorite={() => handleToggleFavorite(item.id)}
-                  holdupAmount={item.holdup_amount}
-                />
+                <View style={styles.grid}>
+                  {compositeFeed.map((feedItem, index) => {
+                    if (feedItem.type === 'featured_slider_repeat') {
+                      return (
+                        <View key={`featured-repeat-${index}`} style={{ width: '100%', marginVertical: 20 }}>
+                          {renderFeaturedSlider()}
+                        </View>
+                      );
+                    }
 
-              ))}
-            </View>
-          </View>
-        )}
-
+                    const item = feedItem.item;
+                    return (
+                      <ServiceCard
+                        key={`service-${item.id}-${index}`}
+                        id={item.id}
+                        title={item.title}
+                        location={item.location}
+                        price={item.price}
+                        currency={item.currency}
+                        priceType={item.price_type}
+                        rating={item.rating}
+                        imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
+                        variant="horizontal"
+                        isFavorited={!!item.is_favorited}
+                        onToggleFavorite={() => handleToggleFavorite(item.id)}
+                        holdupAmount={item.holdup_amount}
+                      />
+                    );
+                  })}
+                </View>
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -248,8 +375,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  stickyHeader: {
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+  },
+  scrollContent: {
+    paddingHorizontal: 4,
+    paddingBottom: 24,
+  },
   scroll: {
-    padding: 24,
+    padding: 4,
     paddingTop: 60, // Adjust for safe area
   },
   header: {
@@ -257,7 +392,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 18,
-    marginTop: -20,
   },
   profileInfo: {
     flexDirection: 'row',

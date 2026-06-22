@@ -97,6 +97,17 @@ class ApiService {
     return this.request(`/auth/user/${userId}`);
   }
 
+  async updateUserProfile(userId: string, updates: any) {
+    return this.request(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async getPublicSettings() {
+    return this.request('/users/public/settings');
+  }
+
   // Services
   async getServices(params?: Record<string, string>, userId?: string) {
     const allParams = { ...params };
@@ -561,6 +572,37 @@ class ApiService {
 
   async getActiveEscrow(conversationId: string) {
     return this.request(`/escrow/active/${conversationId}`);
+  }
+
+  // Admin routes
+  async getAdminSettings(): Promise<any> {
+    const url = `${this.baseUrl}/admin/settings`;
+    return this.request(url);
+  }
+
+  async updateAdminSettings(settings: any): Promise<any> {
+    const url = `${this.baseUrl}/admin/settings`;
+    return this.request(url, {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    });
+  }
+
+  // Payment routes (Monetization via Internal Wallet)
+  async subscribePro(plan: 'monthly' | 'yearly', autoRenew: boolean = false): Promise<any> {
+    const url = `${this.baseUrl}/payments/subscribe`;
+    return this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({ plan, autoRenew }),
+    });
+  }
+
+  async boostService(serviceId: string, durationDays: number): Promise<any> {
+    const url = `${this.baseUrl}/payments/boost`;
+    return this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({ serviceId, durationDays }),
+    });
   }
 }
 

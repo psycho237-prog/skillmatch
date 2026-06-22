@@ -102,7 +102,12 @@ export default function MyServicesScreen() {
                     <Typography variant="h6" color={colors.primary} weight="bold">
                       {item.price_type === 'exchange' ? 'Barter' : `${item.price} ${item.currency}`}
                     </Typography>
-                    {item.country && (
+                    {item.is_featured && (
+                      <View style={[styles.countryBadge, { backgroundColor: '#8B5CF620' }]}>
+                        <Typography variant="caption" color="#8B5CF6" weight="bold">⭐ Featured</Typography>
+                      </View>
+                    )}
+                    {item.country && !item.is_featured && (
                       <View style={[styles.countryBadge, { backgroundColor: colors.border + '50' }]}>
                         <Typography variant="caption" color={colors.black2}>{item.country}</Typography>
                       </View>
@@ -114,6 +119,24 @@ export default function MyServicesScreen() {
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
               <View style={styles.actions}>
+                <TouchableOpacity 
+                  style={[styles.actionBtn, { borderColor: '#8B5CF6' }]}
+                  onPress={async () => {
+                    try {
+                      setLoading(true);
+                      await api.boostService(item.id, 7);
+                      Alert.alert('Success', 'Service boosted for 7 days!');
+                      fetchServices();
+                    } catch(e) {
+                      Alert.alert('Error', 'Failed to boost service.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  <Typography variant="body2" color="#8B5CF6" weight="medium">🚀 Boost</Typography>
+                </TouchableOpacity>
+
                 <TouchableOpacity 
                   style={[styles.actionBtn, { borderColor: colors.border }]}
                   onPress={() => handleEdit(item.id)}
@@ -148,7 +171,7 @@ export default function MyServicesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
     flexDirection: 'row',
@@ -160,7 +183,7 @@ const styles = StyleSheet.create({
   placeholder: { width: 80 },
   centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
-    marginHorizontal: 24,
+    marginHorizontal: 4,
     marginBottom: 16,
     borderRadius: 20,
     borderWidth: 1,

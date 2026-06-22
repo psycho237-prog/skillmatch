@@ -168,6 +168,7 @@ export default function Explore() {
             rating={item.rating}
             imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
             variant="horizontal"
+            isFeatured={!!item.is_featured}
             isFavorited={!!item.is_favorited}
             onToggleFavorite={() => handleToggleFavorite(item.id)}
             holdupAmount={item.holdup_amount}
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
   },
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     marginBottom: 24,
   },
   searchBar: {
@@ -247,11 +248,11 @@ const styles = StyleSheet.create({
     height: 24,
   },
   resultCount: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     marginBottom: 16,
   },
   filterRow: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingBottom: 16,
     flexDirection: 'row',
   },
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingBottom: 40,
   },
   empty: {

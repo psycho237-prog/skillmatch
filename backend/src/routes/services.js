@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
 
     let sql = `
       SELECT s.*, 
-             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users,
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url, 'subscription_tier', u.subscription_tier) as users,
              (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
              EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s
@@ -37,14 +37,17 @@ router.get('/', async (req, res) => {
       params.push(`%${location}%`);
     }
 
+    let sortLogic = ' ORDER BY ';
+    // Featured sorting removed so they can be scattered by the algorithm
+    
     if (sort === 'price_asc') {
-      sql += ' ORDER BY s.price ASC';
+      sql += sortLogic + 's.price ASC';
     } else if (sort === 'price_desc') {
-      sql += ' ORDER BY s.price DESC';
+      sql += sortLogic + 's.price DESC';
     } else if (sort === 'rating') {
-      sql += ' ORDER BY s.rating DESC';
+      sql += sortLogic + 's.rating DESC';
     } else {
-      sql += ' ORDER BY s.created_at DESC';
+      sql += sortLogic + 's.created_at DESC';
     }
 
     sql += ` LIMIT $${paramCount++} OFFSET $${paramCount}`;
@@ -93,7 +96,7 @@ router.get('/featured', async (req, res) => {
     const { user_id } = req.query;
     const { rows } = await query(`
       SELECT s.*, 
-             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as users,
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url, 'subscription_tier', u.subscription_tier) as users,
              (SELECT COUNT(*) FROM favorites WHERE service_id = s.id) as likes_count,
              EXISTS(SELECT 1 FROM favorites WHERE service_id = s.id AND user_id = $1) as is_favorited
       FROM services s

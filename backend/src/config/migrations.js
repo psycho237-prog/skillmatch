@@ -46,6 +46,23 @@ async function runMigrations() {
     } catch (err) {
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`);
     }
+    
+    // Add monetization/subscription fields
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free'`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_renew_pro BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_backup_enabled BOOLEAN DEFAULT false`);
+    
+    // Create Platform Settings table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS platform_settings (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        setting_key TEXT UNIQUE NOT NULL,
+        setting_value JSONB NOT NULL,
+        description TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
 
     // 4. Categories table
     await client.query(`
@@ -78,6 +95,8 @@ async function runMigrations() {
         rating DECIMAL(2,1) DEFAULT 0,
         review_count INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT true,
+        is_featured BOOLEAN DEFAULT false,
+        featured_until TIMESTAMPTZ,
         featured numeric DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -90,6 +109,8 @@ async function runMigrations() {
     } catch (err) {
       await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS service_type TEXT`);
     }
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS featured_until TIMESTAMPTZ`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS holdup_amount DECIMAL(10,2)`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'CMR'`);

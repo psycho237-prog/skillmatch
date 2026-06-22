@@ -3,10 +3,25 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
+// GET /api/users/public/settings - Get public platform settings
+router.get('/public/settings', async (req, res) => {
+  try {
+    const { rows } = await query('SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN ($1, $2)', ['pro_monthly_price', 'pro_yearly_price']);
+    const settings = {};
+    rows.forEach(r => settings[r.setting_key] = r.setting_value);
+    res.json({
+      pro_monthly_price: Number(settings['pro_monthly_price'] || 5000),
+      pro_yearly_price: Number(settings['pro_yearly_price'] || 50000)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 // GET /api/users/:id - Get user profile
 router.get('/:id', async (req, res) => {
   try {
-    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, push_token, created_at, correspondent, currency, country, identity_verified, average_rating, total_ratings FROM users WHERE id = $1', [req.params.id]);
+    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, subscription_tier, subscription_expires_at, auto_renew_pro, language, theme, push_token, created_at, correspondent, currency, country, identity_verified, average_rating, total_ratings FROM users WHERE id = $1', [req.params.id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -21,7 +36,7 @@ router.get('/:id', async (req, res) => {
 // PUT /api/users/:id - Update user profile
 router.put('/:id', async (req, res) => {
   try {
-    const { display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, identity_verified, correspondent, currency, country } = req.body;
+    const { display_name, avatar_url, notification_enabled, chat_backup_enabled, auto_renew_pro, language, theme, identity_verified, correspondent, currency, country } = req.body;
 
     const updates = [];
     const params = [];
@@ -42,6 +57,10 @@ router.put('/:id', async (req, res) => {
     if (chat_backup_enabled !== undefined) {
       updates.push(`chat_backup_enabled = $${paramCount++}`);
       params.push(chat_backup_enabled);
+    }
+    if (auto_renew_pro !== undefined) {
+      updates.push(`auto_renew_pro = $${paramCount++}`);
+      params.push(auto_renew_pro);
     }
     if (language !== undefined) {
       updates.push(`language = $${paramCount++}`);
@@ -79,7 +98,7 @@ router.put('/:id', async (req, res) => {
     updates.push(`updated_at = NOW()`);
 
     params.push(req.params.id);
-    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, push_token, correspondent, currency, country, identity_verified, average_rating, total_ratings`;
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, subscription_tier, subscription_expires_at, auto_renew_pro, language, theme, push_token, correspondent, currency, country, identity_verified, average_rating, total_ratings`;
 
     const { rows } = await query(sql, params);
 

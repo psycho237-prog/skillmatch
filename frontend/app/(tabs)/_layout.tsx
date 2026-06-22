@@ -40,7 +40,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Image
               source={icons.home}
-              style={[styles.icon, { tintColor: color }]}
+              style={styles.icon}
               resizeMode="contain"
             />
           ),

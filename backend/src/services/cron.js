@@ -2,6 +2,7 @@ const { query } = require('../config/database');
 const { processEscrowPayout } = require('../routes/escrow');
 const crypto = require('crypto');
 const { setGlobalIoInstance, reconcilePendingTransactions } = require('./walletReconciler');
+const { sendPushNotification } = require('../config/notifications');
 
 async function resolveExpiredEscrows() {
   try {
@@ -130,6 +131,87 @@ async function resolveExpiredEscrows() {
   }
 }
 
+async function processSubscriptions() {
+  try {
+    console.log(`[CRON SUB] Running processSubscriptions at: ${new Date().toISOString()}`);
+
+    // Ensure pro_reminder_sent exists
+    try {
+      await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pro_reminder_sent BOOLEAN DEFAULT false`);
+    } catch (e) { }
+
+    // 1. Process expirations and auto-renewals
+    const expiredRes = await query(`
+      SELECT id, push_token, auto_renew_pro
+      FROM users 
+      WHERE subscription_tier = 'premium' AND subscription_expires_at <= NOW()
+    `);
+
+    for (const user of expiredRes.rows) {
+      if (user.auto_renew_pro) {
+        // Fetch price
+        const settingsRes = await query("SELECT setting_value FROM platform_settings WHERE setting_key = 'pro_monthly_price'");
+        const price = settingsRes.rows[0] ? Number(settingsRes.rows[0].setting_value) : 5000;
+
+        const walletRes = await query('SELECT id, balance FROM wallets WHERE user_id = $1', [user.id]);
+        
+        if (walletRes.rows.length > 0 && parseFloat(walletRes.rows[0].balance) >= price) {
+          const wallet = walletRes.rows[0];
+          
+          await query(`UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE id = $2`, [price, wallet.id]);
+          
+          const txId = crypto.randomUUID();
+          await query(`
+            INSERT INTO wallet_transactions (id, user_id, wallet_id, type, amount, balance_before, balance_after, status, description) 
+            VALUES ($1, $2, $3, 'transfer_out', $4, $5, $6, 'completed', $7)
+          `, [txId, user.id, wallet.id, price, wallet.balance, parseFloat(wallet.balance) - price, 'Auto-renouvellement Swapster Pro']);
+          
+          await query(`
+            UPDATE users 
+            SET subscription_expires_at = NOW() + interval '1 month', pro_reminder_sent = false, updated_at = NOW() 
+            WHERE id = $1
+          `, [user.id]);
+          
+          if (user.push_token) await sendPushNotification(user.push_token, 'Abonnement Renouvelé', 'Votre abonnement Swapster Pro a été renouvelé avec succès!');
+          console.log(`[CRON SUB] Auto-renewed Pro for user ${user.id}`);
+          continue;
+        }
+      }
+      
+      // If no auto-renew or insufficient funds -> Downgrade
+      await query(`
+        UPDATE users 
+        SET subscription_tier = 'free', auto_renew_pro = false, pro_reminder_sent = false, updated_at = NOW() 
+        WHERE id = $1
+      `, [user.id]);
+      
+      if (user.push_token) await sendPushNotification(user.push_token, 'Abonnement Expiré', 'Votre abonnement Swapster Pro a expiré.');
+      console.log(`[CRON SUB] Downgraded user ${user.id} to free tier.`);
+    }
+
+    // 2. 3-day warnings
+    const warningsRes = await query(`
+      SELECT id, push_token 
+      FROM users 
+      WHERE subscription_tier = 'premium' 
+        AND subscription_expires_at <= NOW() + interval '3 days' 
+        AND subscription_expires_at > NOW() 
+        AND pro_reminder_sent = false
+    `);
+
+    for (const user of warningsRes.rows) {
+      await query(`UPDATE users SET pro_reminder_sent = true WHERE id = $1`, [user.id]);
+      if (user.push_token) {
+        await sendPushNotification(user.push_token, 'Abonnement Bientôt Expiré', 'Votre abonnement Swapster Pro expire dans moins de 3 jours.');
+      }
+      console.log(`[CRON SUB] Sent 3-day warning to user ${user.id}`);
+    }
+
+  } catch (error) {
+    console.error('[CRON ERROR] processSubscriptions failed:', error);
+  }
+}
+
 function startCronScheduler(io) {
   if (io) {
     setGlobalIoInstance(io);
@@ -137,10 +219,12 @@ function startCronScheduler(io) {
 
   // Run every 15 minutes
   setInterval(resolveExpiredEscrows, 15 * 60 * 1000);
-  console.log('⏰ SkillPay Escrow Cron Scheduler started (running every 15 minutes)');
+  setInterval(processSubscriptions, 15 * 60 * 1000);
+  console.log('⏰ SkillPay Escrow & Subscriptions Cron Scheduler started (running every 15 minutes)');
   
   // Run once immediately on start
   resolveExpiredEscrows();
+  processSubscriptions();
 }
 
 module.exports = { startCronScheduler };

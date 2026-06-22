@@ -10,8 +10,42 @@ router.use(authenticateToken);
 router.use(requireSuperadmin);
 
 // ==========================================
-// 1. STATISTIQUES GLOBALES
+// 1. PARAMÈTRES ET STATISTIQUES GLOBALES
 // ==========================================
+router.get('/settings', async (req, res) => {
+  try {
+    const { rows } = await query('SELECT setting_key, setting_value, description FROM platform_settings');
+    const settings = {};
+    rows.forEach(r => {
+      settings[r.setting_key] = r.setting_value;
+    });
+    if (!settings['commission_percentage']) settings['commission_percentage'] = 5.0;
+    if (!settings['pro_monthly_price']) settings['pro_monthly_price'] = 5000;
+    if (!settings['pro_yearly_price']) settings['pro_yearly_price'] = 50000;
+    res.json({ settings });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') return res.status(400).json({ error: 'Invalid settings' });
+
+    for (const [key, value] of Object.entries(settings)) {
+      await query(
+        `INSERT INTO platform_settings (setting_key, setting_value, updated_at) 
+         VALUES ($1, $2, NOW()) 
+         ON CONFLICT (setting_key) DO UPDATE SET setting_value = $2, updated_at = NOW()`,
+        [key, JSON.stringify(value)]
+      );
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 router.get('/stats', async (req, res) => {
   try {
     // Users metrics
@@ -36,6 +70,10 @@ router.get('/stats', async (req, res) => {
     const disputedTx = await query("SELECT count(*) FROM transactions WHERE status = 'disputed'");
     const cancelledTx = await query("SELECT count(*) FROM transactions WHERE status IN ('cancelled', 'expired')");
 
+    // Pro Users and Featured Services
+    const proUsersCountRes = await query(`SELECT count(*) FROM users WHERE subscription_tier = 'premium' AND (subscription_expires_at IS NULL OR subscription_expires_at > NOW())`);
+    const featuredServicesRes = await query(`SELECT count(*) FROM services WHERE is_featured = true AND (featured_until IS NULL OR featured_until > NOW()) AND deleted_at IS NULL`);
+
     // Commission metrics
     const platformRes = await query("SELECT balance, total_commissions, total_transactions FROM platform_account WHERE id = 1");
     const commissionsTotal = platformRes.rows[0]?.total_commissions || 0;
@@ -51,7 +89,11 @@ router.get('/stats', async (req, res) => {
         new_7d: parseInt(newUsers7d.rows[0].count),
         new_30d: parseInt(newUsers30d.rows[0].count),
         active_this_month: parseInt(activeUsers.rows[0].count),
-        suspended: parseInt(suspendedUsers.rows[0].count)
+        suspended: parseInt(suspendedUsers.rows[0].count),
+        pro_users: parseInt(proUsersCountRes.rows[0].count)
+      },
+      services: {
+        featured: parseInt(featuredServicesRes.rows[0].count)
       },
       transactions: {
         total: parseInt(totalTx.rows[0].count),

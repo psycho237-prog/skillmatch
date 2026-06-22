@@ -377,7 +377,7 @@ export default function PostService() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
     flexDirection: 'row',
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 80 },
   placeholder: { width: 80 },
-  scroll: { flexGrow: 1, padding: 24 },
+  scroll: { flexGrow: 1, padding: 4 },
   form: { width: '100%' },
   label: { marginBottom: 8, marginTop: 16 },
   inputGroup: {

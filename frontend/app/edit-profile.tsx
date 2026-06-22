@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    padding: 24,
+    padding: 4,
   },
   avatarSection: {
     alignItems: 'center',

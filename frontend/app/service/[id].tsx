@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
   },
   pagination: {
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     tintColor: '#FFF',
   },
   content: {
-    padding: 24,
+    padding: 4,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: -30,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    padding: 24,
+    padding: 4,
     paddingBottom: 40,
     borderTopWidth: 1,
     alignItems: 'center',

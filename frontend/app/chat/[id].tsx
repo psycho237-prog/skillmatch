@@ -1454,7 +1454,7 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
+    padding: 4,
     minHeight: 400,
   },
   modalHeader: {
@@ -1568,12 +1568,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 4,
   },
   disputeContent: {
     width: '100%',
     borderRadius: 24,
-    padding: 24,
+    padding: 4,
   },
   disputeInputGroup: {
     width: '100%',

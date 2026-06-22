@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   list: {
-    padding: 24,
+    padding: 4,
   },
   convItem: {
     flexDirection: 'row',

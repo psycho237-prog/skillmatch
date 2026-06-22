@@ -9,6 +9,8 @@ import { icons } from '../../src/constants';
 import { socketService } from '../../src/services/socket';
 import { backupDbToCloud, restoreDbFromCloud } from '../../src/services/localDb';
 
+import { Ionicons } from '@expo/vector-icons';
+
 export default function Profile() {
   const { colors, t, user, setUser, themePreference, setThemePreference, language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useApp();
   const router = useRouter();
@@ -19,7 +21,15 @@ export default function Profile() {
   const [readinessData, setReadinessData] = useState<any>(null);
   const [loadingReadiness, setLoadingReadiness] = useState(false);
   const [chatSettingsVisible, setChatSettingsVisible] = useState(false);
+  const [premiumSettingsVisible, setPremiumSettingsVisible] = useState(false);
+  const [proPrices, setProPrices] = useState({ monthly: 5000, yearly: 50000 });
   const [backupLoading, setBackupLoading] = useState(false);
+
+  React.useEffect(() => {
+    api.getPublicSettings().then(res => {
+      setProPrices({ monthly: res.pro_monthly_price, yearly: res.pro_yearly_price });
+    }).catch(e => console.warn('Backend not updated yet for settings:', e.message));
+  }, []);
 
   const fetchReadiness = async () => {
     if (!user) return;
@@ -78,12 +88,12 @@ export default function Profile() {
 
   const menuItems: any[] = [
     { icon: icons.calendar, title: t('my_services'), action: () => router.push('/my-services') },
-    { icon: icons.star, title: 'Post a Service', action: () => router.push('/post-service') },
-    { icon: icons.wallet, title: 'Payments', action: () => router.push('/(tabs)/wallet') },
-    { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
-    { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
+    { icon: icons.star, title: t('post_service'), action: () => router.push('/post-service') },
+    { icon: icons.wallet, title: t('payments'), action: () => router.push('/(tabs)/wallet') },
+    { icon: icons.search, title: t('transaction_history'), action: () => router.push('/transaction-history') },
+    { icon: icons.edit, title: t('requirements_checklist'), action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
     { icon: icons.person, title: t('profile'), action: () => router.push('/edit-profile') },
-    { icon: icons.calendar, title: 'Chat Settings & Backup', action: () => setChatSettingsVisible(true) },
+    { icon: icons.chat, title: t('chat_settings_backup'), action: () => setChatSettingsVisible(true) },
     { 
       icon: icons.bell, 
       title: t('notifications_setting'), 
@@ -102,29 +112,27 @@ export default function Profile() {
       rightText: getLangText()
     },
     { 
-      icon: icons.edit, // Reusing an icon for theme toggle mock
+      icon: icons.area,
       title: t('theme'), 
       action: () => setThemeModalVisible(true),
       rightText: getThemeText()
     },
     {
-      icon: icons.info,
-      title: 'Chat Backup',
+      icon: icons.send,
+      title: t('chat_backup_toggle'),
       action: undefined,
       rightElement: <Switch 
         value={user?.chat_backup_enabled || false} 
         onValueChange={async (val) => {
           if (!user) return;
-          // Optimistic update so it toggles instantly
           setUser({ ...user, chat_backup_enabled: val });
           try {
-            const res = await api.updateUser(user.id, { chat_backup_enabled: val });
+            const res = await api.updateUserProfile(user.id, { chat_backup_enabled: val });
             setUser(res.user);
           } catch (e) {
             console.error('Failed to update chat backup:', e);
-            // Revert on failure
             setUser({ ...user, chat_backup_enabled: !val });
-            Alert.alert('Error', 'Failed to update chat backup setting on the server. Please ensure the backend is deployed.');
+            Alert.alert('Error', 'Failed to update chat backup setting on the server.');
           }
         }} 
         trackColor={{ false: colors.border, true: colors.primary }}
@@ -135,7 +143,11 @@ export default function Profile() {
   ];
 
   if (user?.role === 'superadmin') {
-    menuItems.unshift({ icon: icons.shield, title: 'Admin Dashboard', action: () => router.push('/(admin)') });
+    menuItems.unshift({ icon: icons.shield, title: t('admin_dashboard'), action: () => router.push('/(admin)') });
+  }
+
+  if (user?.subscription_tier === 'premium') {
+    menuItems.splice(1, 0, { icon: icons.star, title: t('premium_settings'), action: () => setPremiumSettingsVisible(true) });
   }
 
   return (
@@ -159,6 +171,48 @@ export default function Profile() {
           </View>
           <Typography variant="h3" style={styles.name}>{user?.display_name}</Typography>
         </View>
+
+        {/* Pro Banner */}
+        {user?.subscription_tier === 'premium' ? (
+          <View style={[styles.proBanner, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B' }]}>
+            <Ionicons name="star" size={20} color="#F59E0B" />
+            <Typography variant="h6" style={{ color: '#F59E0B', marginLeft: 8 }}>Swapster Pro Member</Typography>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.proBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+            onPress={async () => {
+              Alert.alert(
+                'Upgrade to Swapster Pro',
+                `Do you want to subscribe monthly (${proPrices.monthly} XAF) or yearly (${proPrices.yearly} XAF)?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Monthly', onPress: async () => {
+                    try {
+                      const res = await api.subscribePro('monthly', true);
+                      setUser(res.user);
+                      Alert.alert('Success', res.message || 'Welcome to Swapster Pro!');
+                    } catch(e: any) {
+                      Alert.alert('Error', e.message || 'Failed to subscribe.');
+                    }
+                  }},
+                  { text: 'Yearly', onPress: async () => {
+                    try {
+                      const res = await api.subscribePro('yearly', true);
+                      setUser(res.user);
+                      Alert.alert('Success', res.message || 'Welcome to Swapster Pro!');
+                    } catch(e: any) {
+                      Alert.alert('Error', e.message || 'Failed to subscribe.');
+                    }
+                  }}
+                ]
+              );
+            }}
+            >
+              <Ionicons name="rocket-outline" size={20} color={colors.primary} />
+              <Typography variant="h6" style={{ color: colors.primary, marginLeft: 8 }}>{t('upgrade_pro', { price: proPrices.monthly })}</Typography>
+            </TouchableOpacity>
+        )}
 
         {/* Menu Items */}
         <View style={styles.menuList}>
@@ -240,13 +294,13 @@ export default function Profile() {
         <Pressable style={styles.modalOverlay} onPress={() => setChatSettingsVisible(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: '85%' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Typography variant="h4">Chat Backup (Cloud)</Typography>
+              <Typography variant="h4">{t('chat_settings_backup')}</Typography>
               <TouchableOpacity onPress={() => setChatSettingsVisible(false)}>
-                <Typography variant="h5" color={colors.primary}>Close</Typography>
+                <Typography variant="h5" color={colors.primary}>{t('close')}</Typography>
               </TouchableOpacity>
             </View>
             <Typography variant="body1" color={colors.black2} style={{marginBottom: 20}}>
-              Since messages are stored on your device for privacy, you can backup your chat history to the cloud to avoid losing them.
+              {t('backup_desc')}
             </Typography>
 
             <TouchableOpacity 
@@ -264,7 +318,7 @@ export default function Profile() {
               }}
               disabled={backupLoading}
             >
-               <Typography variant="h6" color="#FFF">{backupLoading ? 'Backing up...' : 'Backup Chats Now'}</Typography>
+               <Typography variant="h6" color="#FFF">{backupLoading ? t('backing_up') : t('backup_btn')}</Typography>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -286,8 +340,53 @@ export default function Profile() {
               }}
               disabled={backupLoading}
             >
-               <Typography variant="h6" color={colors.primary}>{backupLoading ? 'Restoring...' : 'Restore Chats'}</Typography>
+               <Typography variant="h6" color={colors.primary}>{backupLoading ? t('restoring') : t('restore_btn')}</Typography>
             </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Premium Settings Modal */}
+      <Modal visible={premiumSettingsVisible} transparent animationType="slide" onRequestClose={() => setPremiumSettingsVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setPremiumSettingsVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Typography variant="h4">{t('premium_settings')}</Typography>
+              <TouchableOpacity onPress={() => setPremiumSettingsVisible(false)}>
+                <Typography variant="h5" color={colors.primary}>{t('close')}</Typography>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ flex: 1, marginRight: 16 }}>
+                <Typography variant="h6">{t('auto_renewal')}</Typography>
+                <Typography variant="body2" color={colors.black3}>
+                  {t('auto_renewal_desc')}
+                </Typography>
+              </View>
+              <Switch 
+                value={user?.auto_renew_pro || false} 
+                onValueChange={async (val) => {
+                  if (!user) return;
+                  setUser({ ...user, auto_renew_pro: val });
+                  try {
+                    const res = await api.updateUserProfile(user.id, { auto_renew_pro: val });
+                    setUser(res.user);
+                  } catch (e) {
+                    console.error('Failed to update auto-renew:', e);
+                    setUser({ ...user, auto_renew_pro: !val });
+                    Alert.alert('Error', 'Failed to update setting on the server.');
+                  }
+                }} 
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+            
+            <View style={{ marginTop: 24 }}>
+              <Typography variant="body2" color={colors.black2}>
+                {t('sub_expires_on')} {user?.subscription_expires_at ? new Date(user.subscription_expires_at).toLocaleDateString() : 'N/A'}
+              </Typography>
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -297,25 +396,25 @@ export default function Profile() {
         <Pressable style={styles.modalOverlay} onPress={() => setRequirementsModalVisible(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: '85%' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Typography variant="h4">Readiness Checklist</Typography>
+              <Typography variant="h4">{t('requirements_checklist')}</Typography>
               <TouchableOpacity onPress={() => setRequirementsModalVisible(false)}>
-                <Typography variant="h5" color={colors.primary}>Close</Typography>
+                <Typography variant="h5" color={colors.primary}>{t('close')}</Typography>
               </TouchableOpacity>
             </View>
 
             {loadingReadiness || !readinessData ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Typography variant="body2" color={colors.black3} style={{ marginTop: 12 }}>Checking database...</Typography>
+                <Typography variant="body2" color={colors.black3} style={{ marginTop: 12 }}>{t('checking_db')}</Typography>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={{ marginBottom: 24, padding: 16, backgroundColor: colors.card, borderRadius: 16 }}>
                   <Typography variant="h5" style={{ marginBottom: 8 }}>
-                    Readiness Score: {readinessData.score}/{readinessData.total}
+                    {t('readiness_score')}{readinessData.score}/{readinessData.total}
                   </Typography>
                   <Typography variant="body2" color={colors.black2} style={{ marginBottom: 12 }}>
-                    You are {Math.round((readinessData.score / readinessData.total) * 100)}% ready to transact.
+                    {t('ready_to_transact', { percent: Math.round((readinessData.score / readinessData.total) * 100) })}
                   </Typography>
                   
                   {/* Progress Bar */}
@@ -327,8 +426,8 @@ export default function Profile() {
                 {/* Checklist items */}
                 <ChecklistItem 
                   checked={readinessData.phoneVerified} 
-                  title="Phone number verified" 
-                  desc="Required for PawaPay transactions"
+                  title={t('phone_verified')} 
+                  desc={t('phone_verified_desc')}
                   onFix={() => {
                     setRequirementsModalVisible(false);
                     Alert.alert("Verify Phone", "Your phone number is linked and verified at onboarding.");
@@ -338,8 +437,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.mobileNetworkDetected} 
-                  title="Mobile network detected" 
-                  desc="Correspondent auto-detected on profile"
+                  title={t('network_detected')} 
+                  desc={t('network_detected_desc')}
                   onFix={() => {
                     setRequirementsModalVisible(false);
                     Alert.alert("Network Info", "Your network operator is predicted automatically from your phone format.");
@@ -349,8 +448,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.profilePhotoUploaded} 
-                  title="Profile photo uploaded" 
-                  desc="A valid avatar image is set"
+                  title={t('photo_uploaded')} 
+                  desc={t('photo_uploaded_desc')}
                   onFix={() => {
                     setRequirementsModalVisible(false);
                     pickImage();
@@ -360,8 +459,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.servicePosted} 
-                  title="At least one service posted" 
-                  desc="You have published an offering"
+                  title={t('service_posted')} 
+                  desc={t('service_posted_desc')}
                   onFix={() => {
                     setRequirementsModalVisible(false);
                     router.push('/post-service');
@@ -371,8 +470,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.holdupAmountSet} 
-                  title="Escrow hold set on all services" 
-                  desc="No service has a null/zero holdup amount"
+                  title={t('escrow_set')} 
+                  desc={t('escrow_set_desc')}
                   onFix={() => {
                     setRequirementsModalVisible(false);
                     router.push('/post-service');
@@ -382,8 +481,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.walletFunded} 
-                  title="Wallet is funded" 
-                  desc="Wallet balance must be greater than 0"
+                  title={t('wallet_funded')} 
+                  desc={t('wallet_funded_desc')}
                   onFix={async () => {
                     try {
                       setLoadingReadiness(true);
@@ -402,8 +501,8 @@ export default function Profile() {
 
                 <ChecklistItem 
                   checked={readinessData.identityVerified} 
-                  title="Identity verified" 
-                  desc="Name matches mobile money account"
+                  title={t('identity_verified')} 
+                  desc={t('identity_verified_desc')}
                   onFix={async () => {
                     if (!user) return;
                     try {
@@ -455,7 +554,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
   },
@@ -463,7 +562,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingBottom: 40,
   },
   profileCard: {
@@ -494,6 +593,16 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     tintColor: '#FFF',
+  },
+  proBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginHorizontal: 4,
+    marginBottom: 24,
+    borderWidth: 1,
   },
   name: {
     marginBottom: 8,
@@ -526,12 +635,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 4,
   },
   modalContent: {
     width: '100%',
     borderRadius: 24,
-    padding: 24,
+    padding: 4,
   },
   modalTitle: {
     marginBottom: 24,

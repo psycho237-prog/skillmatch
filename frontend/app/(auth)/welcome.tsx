@@ -242,13 +242,13 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     alignItems: 'center',
   },
   title: { marginBottom: 10 },
   desc: { marginBottom: 15 },
   formContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingVertical:10,
     width: '100%',
   },

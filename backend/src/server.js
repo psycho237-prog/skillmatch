@@ -18,6 +18,7 @@ const escrowRoutes = require('./routes/escrow').router;
 const webhookRoutes = require('./routes/webhooks');
 const ratingsRoutes = require('./routes/ratings');
 const transactionsRoutes = require('./routes/transactions');
+const paymentsRoutes = require('./routes/payments');
 const { setupChatSocket } = require('./sockets/chat');
 const { initBaileys } = require('./config/whatsapp');
 const { startCronScheduler } = require('./services/cron');
@@ -65,6 +66,7 @@ app.use('/api/ratings', ratingsRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/webhooks', webhookRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

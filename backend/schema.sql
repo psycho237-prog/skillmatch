@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
   google_id TEXT,
   notification_enabled BOOLEAN DEFAULT true,
   chat_backup_enabled BOOLEAN DEFAULT false,
+  subscription_tier TEXT DEFAULT 'free', -- 'free', 'premium'
+  subscription_expires_at TIMESTAMPTZ,
+  auto_renew_pro BOOLEAN DEFAULT false,
   language TEXT DEFAULT 'en',
   theme TEXT DEFAULT 'system',
   push_token TEXT,
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS services (
   review_count INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
   is_featured BOOLEAN DEFAULT false,
+  featured_until TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -92,6 +96,15 @@ CREATE TABLE IF NOT EXISTS favorites (
   service_id UUID REFERENCES services(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, service_id)
+);
+
+-- Platform Settings table
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  setting_key TEXT UNIQUE NOT NULL,
+  setting_value JSONB NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create indexes for performance
@@ -140,6 +153,11 @@ INSERT INTO categories (name, icon, color) VALUES
   ('Marketing', 'megaphone', '#0EA5E9'),
   ('Other', 'more-horizontal', '#9CA3AF')
 ON CONFLICT (name) DO NOTHING;
+
+-- Seed platform settings
+INSERT INTO platform_settings (setting_key, setting_value, description) VALUES
+  ('commission_percentage', '5.0'::jsonb, 'Percentage taken from payments')
+ON CONFLICT (setting_key) DO NOTHING;
 
 -- Seed sample services for demo
 INSERT INTO users (id, email, display_name, avatar_url) VALUES

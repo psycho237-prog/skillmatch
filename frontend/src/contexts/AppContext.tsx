@@ -17,6 +17,10 @@ interface User {
   theme: string;
   role?: string;
   currency?: string | null;
+  subscription_tier?: string;
+  subscription_expires_at?: string | null;
+  auto_renew_pro?: boolean;
+  chat_backup_enabled?: boolean;
 }
 
 export interface StoredNotification {
@@ -257,7 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEYS.THEME, pref);
     if (user) {
       try {
-        const updateRes = await api.updateUser(user.id, { theme: pref });
+        const updateRes = await api.updateUserProfile(user.id, { theme: pref });
         setUserState(updateRes.user);
         await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
       } catch (e) {
@@ -271,7 +275,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
     if (user) {
       try {
-        const updateRes = await api.updateUser(user.id, { language: lang });
+        const updateRes = await api.updateUserProfile(user.id, { language: lang });
         setUserState(updateRes.user);
         await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
       } catch (e) {
@@ -285,7 +289,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, String(enabled));
     if (user) {
       try {
-        const updateRes = await api.updateUser(user.id, { notification_enabled: enabled });
+        const updateRes = await api.updateUserProfile(user.id, { notification_enabled: enabled });
         setUserState(updateRes.user);
         await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updateRes.user));
       } catch (e) {

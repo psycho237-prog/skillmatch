@@ -21,7 +21,7 @@ import { icons } from '../../src/constants';
 import { CountryPicker } from '../../src/components/CountryPicker';
 
 export default function WalletScreen() {
-  const { colors, user } = useApp();
+  const { colors, user, t } = useApp();
   const [balance, setBalance] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +149,7 @@ export default function WalletScreen() {
           </Text>
           {item.status === 'pending' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={[styles.historyStatus, { color: colors.warning, marginRight: 8 }]}>Pending</Text>
+              <Text style={[styles.historyStatus, { color: colors.warning, marginRight: 8 }]}>{t('status_pending')}</Text>
               <TouchableOpacity 
                 style={{ 
                   backgroundColor: colors.primary + '15', 
@@ -165,7 +165,7 @@ export default function WalletScreen() {
                 {isVerifying ? (
                   <ActivityIndicator size="small" color={colors.primary} style={{ transform: [{ scale: 0.7 }] }} />
                 ) : (
-                  <Text style={{ color: colors.primary, fontSize: 11, fontFamily: 'Rubik-Medium' }}>Verify</Text>
+                  <Text style={{ color: colors.primary, fontSize: 11, fontFamily: 'Rubik-Medium' }}>{t('verify')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -186,19 +186,19 @@ export default function WalletScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.black1 }]}>My Wallet</Text>
+        <Text style={[styles.headerTitle, { color: colors.black1 }]}>{t('my_wallet')}</Text>
       </View>
 
       {/* Balance Card */}
       <View style={[styles.card, { backgroundColor: colors.primary }]}>
-        <Text style={styles.cardLabel}>Available Balance</Text>
+        <Text style={styles.cardLabel}>{t('available_balance')}</Text>
         <Text style={styles.cardBalance}>
           {Number(balance?.balance || 0).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
         </Text>
         
         {Number(balance?.pending_balance) > 0 && (
           <View style={styles.pendingContainer}>
-            <Text style={styles.pendingLabel}>Pending (Escrow):</Text>
+            <Text style={styles.pendingLabel}>{t('pending_escrow')}</Text>
             <Text style={styles.pendingAmount}>
               {Number(balance?.pending_balance).toLocaleString()} {user?.currency || balance?.currency || 'XAF'}
             </Text>
@@ -215,7 +215,7 @@ export default function WalletScreen() {
           <View style={[styles.actionIcon, { backgroundColor: colors.primary + '20' }]}>
             <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.primary }]} />
           </View>
-          <Text style={[styles.actionText, { color: colors.black1 }]}>Deposit</Text>
+          <Text style={[styles.actionText, { color: colors.black1 }]}>{t('deposit')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -223,17 +223,17 @@ export default function WalletScreen() {
           onPress={() => openModal('withdraw')}
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.danger + '20' }]}>
-             <Image source={icons.wallet} style={[styles.icon, { tintColor: colors.danger }]} />
+             <Image source={icons.send} style={[styles.icon, { tintColor: colors.danger }]} />
           </View>
-          <Text style={[styles.actionText, { color: colors.black1 }]}>Withdraw</Text>
+          <Text style={[styles.actionText, { color: colors.black1 }]}>{t('withdraw')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* History */}
       <View style={styles.historyContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.black1 }]}>Recent Transactions</Text>
+        <Text style={[styles.sectionTitle, { color: colors.black1 }]}>{t('recent_transactions')}</Text>
         {history.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.black3 }]}>No transactions yet</Text>
+          <Text style={[styles.emptyText, { color: colors.black3 }]}>{t('no_transactions')}</Text>
         ) : (
           <FlatList
             data={history}
@@ -265,14 +265,14 @@ export default function WalletScreen() {
           >
             <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
               <Text style={[styles.modalTitle, { color: colors.black1 }]}>
-                {modalType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
+                {modalType === 'deposit' ? t('deposit_funds') : t('withdraw_funds')}
               </Text>
               <Text style={[styles.modalSubtitle, { color: colors.black3 }]}>
-                Via Mobile Money (Sandbox)
+                {t('via_mobile_money')}
               </Text>
 
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.black1 }]}>Amount ({user?.currency || balance?.currency || 'XAF'})</Text>
+                <Text style={[styles.inputLabel, { color: colors.black1 }]}>{t('amount')} ({user?.currency || balance?.currency || 'XAF'})</Text>
                 <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
                   <TextInput
                     style={[styles.input, { color: colors.black1 }]}
@@ -286,7 +286,7 @@ export default function WalletScreen() {
               </View>
    
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.black1 }]}>Mobile Money Number</Text>
+                <Text style={[styles.inputLabel, { color: colors.black1 }]}>{t('mobile_money_number')}</Text>
                 <View style={[styles.inputContainer, { flexDirection: 'row', alignItems: 'center', borderColor: colors.border, backgroundColor: colors.inputBg || colors.border + '15' }]}>
                   <CountryPicker selectedCode={countryCode} onSelectCode={setCountryCode} />
                   <TextInput
@@ -306,7 +306,7 @@ export default function WalletScreen() {
                   onPress={() => setModalVisible(false)}
                   disabled={processing}
                 >
-                  <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>Cancel</Text>
+                  <Text style={{ color: colors.black1, fontFamily: 'Rubik-Medium' }}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -318,7 +318,7 @@ export default function WalletScreen() {
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
                     <Text style={{ color: '#fff', fontFamily: 'Rubik-Medium' }}>
-                      {modalType === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdrawal'}
+                      {modalType === 'deposit' ? t('confirm_deposit') : t('confirm_withdraw')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   card: {
     margin: 20,
     borderRadius: 20,
-    padding: 24,
+    padding: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
+    padding: 4,
     minHeight: 400,
   },
   modalTitle: {

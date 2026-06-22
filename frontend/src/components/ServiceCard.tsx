@@ -83,9 +83,16 @@ export const ServiceCard = ({
             {location}
           </Typography>
           <View style={styles.footer}>
-            <Typography variant="h6" color={colors.primary} numberOfLines={1} style={{ flex: 1 }}>
-              {formatPrice()}
-            </Typography>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Typography variant="h6" color={colors.primary} numberOfLines={1}>
+                {formatPrice()}
+              </Typography>
+              {isFeatured && (
+                <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 4 }}>
+                  <Typography variant="caption" color="#8B5CF6" weight="bold">Featured</Typography>
+                </View>
+              )}
+            </View>
             <TouchableOpacity 
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={(e) => {

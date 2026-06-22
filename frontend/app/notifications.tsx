@@ -98,7 +98,7 @@ export default function NotificationsScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Typography variant="h1" style={{ fontSize: 60, marginBottom: 16 }}>🔔</Typography>
+            <Image source={icons.bell} style={{ width: 80, height: 80, tintColor: colors.primary, marginBottom: 16 }} />
             <Typography variant="h5" color={colors.black2} style={{ marginBottom: 8 }}>
               No notifications yet
             </Typography>
@@ -116,7 +116,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingTop: 60,
     paddingBottom: 20,
     flexDirection: 'row',
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   clearBtn: { width: 80, alignItems: 'flex-end' },
   placeholder: { width: 80 },
   card: {
-    marginHorizontal: 24,
+    marginHorizontal: 4,
     marginBottom: 12,
     borderRadius: 16,
     borderWidth: 1,

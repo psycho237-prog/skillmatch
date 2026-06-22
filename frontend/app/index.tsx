@@ -6,6 +6,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useApp } from '../src/contexts/AppContext';
@@ -198,9 +199,10 @@ export default function Index() {
               },
             ]}
           >
-            <View style={[styles.logoCircle, { backgroundColor: colors.primary + '22', borderColor: colors.primary + '55' }]}>
-              <Text style={[styles.logoLetter, { color: colors.primary }]}>S</Text>
-            </View>
+            <Image 
+              source={require('../assets/images/icon.png')} 
+              style={{ width: 120, height: 120, resizeMode: 'contain' }} 
+            />
           </Animated.View>
         </View>
 
@@ -231,9 +233,10 @@ export default function Index() {
             <Text style={[styles.poweredByLabel, { color: colors.black2 || '#888' }]}>
               POWERED BY
             </Text>
-            <Text style={[styles.poweredByBrand, { color: colors.primary }]}>
-              PawaPay
-            </Text>
+            <Image
+              source={require('../assets/images/pawapay.png')}
+              style={{ width: 140, height: 40, resizeMode: 'contain', marginTop: 8 }}
+            />
           </Animated.View>
         </Animated.View>
 
