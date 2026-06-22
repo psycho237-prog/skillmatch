@@ -7,10 +7,10 @@ async function updateDb() {
     await query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;`);
     await query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reactions JSONB DEFAULT '{}'::jsonb;`);
     console.log("Migration successful");
+    process.exit(0);
   } catch (e) {
-    console.error(e);
-  } finally {
-    process.exit();
+    console.error("Migration failed:", e);
+    process.exit(1);
   }
 }
 updateDb();
