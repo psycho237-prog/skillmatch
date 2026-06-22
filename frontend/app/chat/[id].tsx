@@ -1010,7 +1010,7 @@ export default function ChatRoom() {
         <View style={[styles.inputWrapper, { backgroundColor: theme === 'dark' ? '#1C1C1E' : '#FFFFFF', borderColor: colors.border,marginBottom:Platform.OS === 'ios' ? 0 : 40}]}>
           <TextInput
             style={[styles.input, { color: colors.black1 }]}
-            placeholder="iMessage"
+            placeholder={t('message', { defaultValue: 'Message' })}
             placeholderTextColor={colors.black3}
             value={input}
             onChangeText={setInput}
