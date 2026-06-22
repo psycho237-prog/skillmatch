@@ -82,7 +82,12 @@ router.get('/messages/:conversationId', async (req, res) => {
     const { limit = 50, offset = 0 } = req.query;
 
     const sql = `
-      SELECT m.*, json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as sender
+      SELECT m.*, 
+             json_build_object('display_name', u.display_name, 'avatar_url', u.avatar_url) as sender,
+             (
+                SELECT json_build_object('id', rm.id, 'content', rm.content, 'sender_id', rm.sender_id, 'is_deleted', rm.is_deleted)
+                FROM messages rm WHERE rm.id = m.reply_to_id
+             ) as reply_to_message
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.conversation_id = $1
@@ -136,17 +141,17 @@ router.post('/conversations', async (req, res) => {
 // POST /api/chat/messages - Send a message
 router.post('/messages', async (req, res) => {
   try {
-    const { conversation_id, sender_id, content } = req.body;
+    const { conversation_id, sender_id, content, reply_to_id } = req.body;
 
     if (!conversation_id || !sender_id || !content) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const { rows: messageRows } = await query(`
-      INSERT INTO messages (conversation_id, sender_id, content, status, created_at)
-      VALUES ($1, $2, $3, 'sent', NOW())
+      INSERT INTO messages (conversation_id, sender_id, content, status, reply_to_id, created_at)
+      VALUES ($1, $2, $3, 'sent', $4, NOW())
       RETURNING *
-    `, [conversation_id, sender_id, content]);
+    `, [conversation_id, sender_id, content, reply_to_id || null]);
 
     let message = messageRows[0];
 

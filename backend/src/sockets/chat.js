@@ -29,12 +29,12 @@ function setupChatSocket(io) {
     // Send a message
     socket.on('send_message', async (data) => {
       try {
-        const { conversation_id, sender_id, content } = data;
+        const { conversation_id, sender_id, content, reply_to_id } = data;
 
         // Save message to Postgres
         const { rows: msgRows } = await query(
-          'INSERT INTO messages (conversation_id, sender_id, content, status, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-          [conversation_id, sender_id, content, 'sent']
+          'INSERT INTO messages (conversation_id, sender_id, content, status, reply_to_id, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
+          [conversation_id, sender_id, content, 'sent', reply_to_id || null]
         );
         let message = msgRows[0];
 
@@ -83,6 +83,82 @@ function setupChatSocket(io) {
         userId: data.user_id,
         conversation_id: data.conversation_id,
       });
+    });
+
+    // Edit a message
+    socket.on('edit_message', async (data) => {
+      try {
+        const { message_id, content, user_id, conversation_id } = data;
+        
+        // Ensure 5 minute limit
+        const { rows: checkRows } = await query('SELECT created_at FROM messages WHERE id = $1 AND sender_id = $2', [message_id, user_id]);
+        if (checkRows.length === 0) return;
+        const msgTime = new Date(checkRows[0].created_at).getTime();
+        const now = Date.now();
+        if (now - msgTime > 5 * 60 * 1000) {
+          socket.emit('message_error', { error: 'Time limit exceeded for editing (5 mins)' });
+          return;
+        }
+
+        const { rows: msgRows } = await query(
+          'UPDATE messages SET content = $1, is_edited = true WHERE id = $2 RETURNING *',
+          [content, message_id]
+        );
+        
+        io.to(`conv_${conversation_id}`).emit('message_updated', msgRows[0]);
+      } catch (error) {
+        console.error('Edit message error:', error);
+      }
+    });
+
+    // Delete a message
+    socket.on('delete_message', async (data) => {
+      try {
+        const { message_id, user_id, conversation_id } = data;
+        
+        // Ensure they own it
+        const { rows: checkRows } = await query('SELECT id FROM messages WHERE id = $1 AND sender_id = $2', [message_id, user_id]);
+        if (checkRows.length === 0) return;
+
+        const { rows: msgRows } = await query(
+          'UPDATE messages SET content = $1, is_deleted = true WHERE id = $2 RETURNING *',
+          ['This message was deleted', message_id]
+        );
+        
+        io.to(`conv_${conversation_id}`).emit('message_updated', msgRows[0]);
+      } catch (error) {
+        console.error('Delete message error:', error);
+      }
+    });
+
+    // React to a message
+    socket.on('react_message', async (data) => {
+      try {
+        const { message_id, user_id, emoji, conversation_id } = data;
+        
+        const { rows: getMsg } = await query('SELECT reactions FROM messages WHERE id = $1', [message_id]);
+        if (getMsg.length === 0) return;
+        
+        let reactions = getMsg[0].reactions || {};
+        if (!reactions[emoji]) reactions[emoji] = [];
+        
+        // Toggle reaction
+        if (reactions[emoji].includes(user_id)) {
+          reactions[emoji] = reactions[emoji].filter(id => id !== user_id);
+          if (reactions[emoji].length === 0) delete reactions[emoji];
+        } else {
+          reactions[emoji].push(user_id);
+        }
+
+        const { rows: msgRows } = await query(
+          'UPDATE messages SET reactions = $1 WHERE id = $2 RETURNING *',
+          [reactions, message_id]
+        );
+        
+        io.to(`conv_${conversation_id}`).emit('message_updated', msgRows[0]);
+      } catch (error) {
+        console.error('React message error:', error);
+      }
     });
 
     // Mark messages as delivered

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, TextInput, FlatList, KeyboardAvoidingView, Platform, Modal, TouchableWithoutFeedback, Alert, Keyboard, Animated, ActivityIndicator, Pressable } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -30,6 +31,13 @@ export default function ChatRoom() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
+
+  // Advanced Chat States
+  const [replyingToMessage, setReplyingToMessage] = useState<any>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [customEmoji, setCustomEmoji] = useState('');
 
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,10 +80,32 @@ export default function ChatRoom() {
 
       socketService.on('new_message', (message: any) => {
         if (message.conversation_id === actualConvId) {
-          setMessages(prev => [...prev, message]);
+          setMessages(prev => {
+            // Check if we already have this exact message by ID
+            if (prev.some(m => m.id === message.id)) return prev;
+            
+            // Find an optimistic message (ID has no hyphens) from the same sender with the same content
+            const optimisticIndex = prev.findIndex(m => m.sender_id === message.sender_id && m.content === message.content && !m.id.includes('-'));
+            
+            if (optimisticIndex !== -1) {
+              const newMessages = [...prev];
+              newMessages[optimisticIndex] = message;
+              return newMessages;
+            }
+            
+            return [...prev, message];
+          });
           socketService.markRead({ conversation_id: actualConvId, user_id: user.id });
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         }
+      });
+
+      socketService.on('message_updated', (updatedMsg: any) => {
+        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m));
+      });
+
+      socketService.on('message_error', (data: any) => {
+        Alert.alert('Error', data.error);
       });
 
       socketService.on('user_status', (data: any) => {
@@ -144,23 +174,90 @@ export default function ChatRoom() {
     const isNew = id.toString().startsWith('new_');
     const actualConvId = isNew ? id.toString().split('_')[1] : id;
     
+    if (editingMessageId) {
+      // Optimistically update locally
+      setMessages(prev => prev.map(m => m.id === editingMessageId ? { ...m, content: input.trim(), is_edited: true } : m));
+      
+      if (!isNew) {
+        socketService.emit('edit_message', {
+          message_id: editingMessageId,
+          content: input.trim(),
+          user_id: user.id,
+          conversation_id: actualConvId
+        });
+      }
+      
+      setInput('');
+      setEditingMessageId(null);
+      return;
+    }
+
     const messageData = {
       conversation_id: actualConvId as string,
       sender_id: user.id,
       content: input.trim(),
+      reply_to_id: replyingToMessage ? replyingToMessage.id : null,
     };
 
     setMessages(prev => [...prev, { 
       ...messageData, 
       id: Date.now().toString(), 
       created_at: new Date().toISOString(),
-      sender: user
+      sender: user,
+      reply_to_message: replyingToMessage
     }]);
+    
     setInput('');
+    setReplyingToMessage(null);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
     if (!isNew) {
       socketService.sendMessage(messageData);
+    }
+  };
+
+  const handleAction = (action: string, emoji?: string) => {
+    setShowActionModal(false);
+    if (!selectedMessage || !user) return;
+    const actualConvId = id.toString().startsWith('new_') ? id.toString().split('_')[1] : id;
+
+    if (action === 'edit') {
+      setInput(selectedMessage.content);
+      setEditingMessageId(selectedMessage.id);
+    } else if (action === 'delete') {
+      Alert.alert('Delete', 'Delete this message?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, content: 'This message was deleted', is_deleted: true } : m));
+            socketService.emit('delete_message', {
+              message_id: selectedMessage.id,
+              user_id: user.id,
+              conversation_id: actualConvId
+            });
+        }}
+      ]);
+    } else if (action === 'react' && emoji) {
+      setMessages(prev => prev.map(m => {
+        if (m.id === selectedMessage.id) {
+          let newReactions = { ...(m.reactions || {}) };
+          let users = newReactions[emoji] || [];
+          if (users.includes(user.id)) {
+            users = users.filter((u: string) => u !== user.id);
+            if (users.length === 0) delete newReactions[emoji];
+            else newReactions[emoji] = users;
+          } else {
+            newReactions[emoji] = [...users, user.id];
+          }
+          return { ...m, reactions: newReactions };
+        }
+        return m;
+      }));
+      socketService.emit('react_message', {
+        message_id: selectedMessage.id,
+        user_id: user.id,
+        emoji,
+        conversation_id: actualConvId
+      });
     }
   };
 
@@ -692,43 +789,93 @@ export default function ChatRoom() {
     }
     
     return (
-      <View style={[styles.msgWrapper, isMe ? styles.msgRight : styles.msgLeft, isSystem && { alignSelf: 'center', maxWidth: '90%' }]}>
-        <View style={[styles.bubbleContainer, isMe ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
-          {!isSystem && <Image source={{ uri: item.sender?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} style={styles.bubbleAvatar} />}
-          <View style={[
-            styles.msgBubble, 
-            isImage && { paddingHorizontal: 4, paddingVertical: 4, backgroundColor: 'transparent' },
-            isSystem ? [styles.systemBubble, { backgroundColor: colors.primary + '15', borderColor: colors.primary }] :
-            (!isImage && isMe) ? [styles.bubbleRight, { backgroundColor: '#007AFF' }] : 
-            (!isImage && !isMe) ? [styles.bubbleLeft, { backgroundColor: theme === 'dark' ? '#2C2C2E' : '#E5E5EA' }] : {}
-          ]}>
-            {isImage ? (
-              <Image source={{ uri: actualContent }} style={{ width: 220, height: 220, borderRadius: 16 }} />
-            ) : isFile ? (
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <Typography variant="h5" color={isMe ? '#FFF' : colors.primary} style={{marginRight: 8}}>📄</Typography>
-                <Typography variant="body2" color={isMe ? '#FFF' : (theme === 'dark' ? '#FFF' : '#000')} style={{textDecorationLine: 'underline', flexShrink: 1}}>
-                  {fileName}
+      <Swipeable
+        renderLeftActions={() => (
+          <View style={{ justifyContent: 'center', alignItems: 'center', width: 60 }}>
+            <Typography variant="h6">↩️</Typography>
+          </View>
+        )}
+        onSwipeableOpen={(direction) => {
+          if (direction === 'left') {
+            setReplyingToMessage(item);
+          }
+        }}
+      >
+        <TouchableOpacity 
+          activeOpacity={0.8}
+          delayLongPress={300}
+          style={[styles.msgWrapper, isMe ? styles.msgRight : styles.msgLeft, isSystem && { alignSelf: 'center', maxWidth: '90%' }]}
+          onLongPress={() => {
+            setSelectedMessage(item);
+            setShowActionModal(true);
+          }}
+        >
+          <View style={[styles.bubbleContainer, isMe ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
+            {!isSystem && <Image source={{ uri: item.sender?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} style={styles.bubbleAvatar} />}
+            <View style={[
+              styles.msgBubble, 
+              isImage && { paddingHorizontal: 4, paddingVertical: 4, backgroundColor: 'transparent' },
+              isSystem ? [styles.systemBubble, { backgroundColor: colors.primary + '15', borderColor: colors.primary }] :
+              (!isImage && isMe) ? [styles.bubbleRight, { backgroundColor: '#007AFF' }] : 
+              (!isImage && !isMe) ? [styles.bubbleLeft, { backgroundColor: theme === 'dark' ? '#2C2C2E' : '#E5E5EA' }] : {}
+            ]}>
+              {/* Replied Message Snippet */}
+              {item.reply_to_message && !isSystem && (
+                <View style={{backgroundColor: 'rgba(0,0,0,0.15)', padding: 6, borderRadius: 8, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: isMe ? '#FFF' : colors.primary}}>
+                  <Typography variant="caption" color={isMe ? '#FFF' : colors.black2} numberOfLines={1}>
+                    {item.reply_to_message.content}
+                  </Typography>
+                </View>
+              )}
+
+              {item.is_deleted ? (
+                <Typography variant="body1" color={isMe ? 'rgba(255,255,255,0.7)' : colors.black3} style={{fontStyle: 'italic'}}>
+                  🚫 This message was deleted
                 </Typography>
-              </View>
-            ) : (
-              <Typography variant="body1" color={isSystem ? colors.primary : isMe ? '#FFF' : (theme === 'dark' ? '#FFF' : '#000')}>
-                {actualContent}
+              ) : isImage ? (
+                <Image source={{ uri: actualContent }} style={{ width: 220, height: 220, borderRadius: 16 }} />
+              ) : isFile ? (
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Typography variant="h5" color={isMe ? '#FFF' : colors.primary} style={{marginRight: 8}}>📄</Typography>
+                  <Typography variant="body2" color={isMe ? '#FFF' : (theme === 'dark' ? '#FFF' : '#000')} style={{textDecorationLine: 'underline', flexShrink: 1}}>
+                    {fileName}
+                  </Typography>
+                </View>
+              ) : (
+                <Typography variant="body1" color={isSystem ? colors.primary : isMe ? '#FFF' : (theme === 'dark' ? '#FFF' : '#000')}>
+                  {actualContent}
+                </Typography>
+              )}
+              
+              {/* Reactions */}
+              {item.reactions && Object.keys(item.reactions).length > 0 && !isSystem && !item.is_deleted && (
+                <View style={{flexDirection: 'row', flexWrap: 'wrap', marginTop: 6, marginLeft: -4}}>
+                  {Object.entries(item.reactions).map(([emoji, users]) => (
+                    <View key={emoji} style={{backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2, margin: 2}}>
+                      <Typography variant="caption" color="#000">{emoji} {(users as string[]).length}</Typography>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isSystem ? 'center' : isMe ? 'flex-end' : 'flex-start', marginTop: 4, marginLeft: isMe || isSystem ? 0 : 44, marginRight: isMe && !isSystem ? 44 : 0 }}>
+            <Typography variant="caption" color={colors.black3} style={{ marginRight: isMe ? 4 : 0 }}>
+              {formatTime(item.created_at)}
+            </Typography>
+            {item.is_edited && !item.is_deleted && (
+              <Typography variant="caption" color={colors.black3} style={{ marginRight: 4, fontStyle: 'italic' }}>
+                (edited)
+              </Typography>
+            )}
+            {isMe && !isSystem && (
+              <Typography variant="caption" color={item.status === 'read' ? '#007AFF' : colors.black3}>
+                {item.status === 'read' ? '✓✓' : item.status === 'delivered' ? '✓✓' : '✓'}
               </Typography>
             )}
           </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isSystem ? 'center' : isMe ? 'flex-end' : 'flex-start', marginTop: 4, marginLeft: isMe || isSystem ? 0 : 44, marginRight: isMe && !isSystem ? 44 : 0 }}>
-          <Typography variant="caption" color={colors.black3} style={{ marginRight: isMe ? 4 : 0 }}>
-            {formatTime(item.created_at)}
-          </Typography>
-          {isMe && !isSystem && (
-            <Typography variant="caption" color={item.status === 'read' ? '#007AFF' : colors.black3}>
-              {item.status === 'read' ? '✓✓' : item.status === 'delivered' ? '✓✓' : '✓'}
-            </Typography>
-          )}
-        </View>
-      </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -801,6 +948,23 @@ export default function ChatRoom() {
             )}
           </View>
           {renderEscrowActions()}
+        </View>
+      )}
+
+      {/* Reply / Edit Preview Bar */}
+      {(replyingToMessage || editingMessageId) && (
+        <View style={{ backgroundColor: colors.card, padding: 12, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: colors.primary, paddingLeft: 8 }}>
+            <Typography variant="caption" color={colors.primary} weight="bold">
+              {editingMessageId ? 'Editing Message' : `Replying to ${replyingToMessage?.sender?.display_name || 'Message'}`}
+            </Typography>
+            <Typography variant="body2" color={colors.black2} numberOfLines={1}>
+              {editingMessageId ? input : replyingToMessage?.content}
+            </Typography>
+          </View>
+          <TouchableOpacity onPress={() => { setReplyingToMessage(null); setEditingMessageId(null); if (editingMessageId) setInput(''); }}>
+            <Typography variant="h5" color={colors.black3}>✕</Typography>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -894,6 +1058,61 @@ export default function ChatRoom() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Message Action Modal */}
+      <Modal transparent visible={showActionModal} animationType="fade">
+        <TouchableWithoutFeedback onPress={() => { setShowActionModal(false); setCustomEmoji(''); }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.actionSheet, { backgroundColor: colors.card }]}>
+              <View style={styles.actionSheetHandle} />
+              
+              {/* Reactions Row */}
+              {!selectedMessage?.is_deleted && !selectedMessage?.content?.startsWith('🤝') && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  {['👍', '❤️', '😂', '😮', '😢'].map(emoji => (
+                    <TouchableOpacity key={emoji} onPress={() => handleAction('react', emoji)}>
+                      <Typography variant="h2">{emoji}</Typography>
+                    </TouchableOpacity>
+                  ))}
+                  
+                  {/* Keyboard Emoji Picker Input */}
+                  <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                     <TextInput 
+                       style={{ fontSize: 32, padding: 0, margin: 0, textAlign: 'center', minWidth: 40 }}
+                       placeholder="+"
+                       placeholderTextColor={colors.black3}
+                       onChangeText={(text) => {
+                         if (text) {
+                           handleAction('react', text);
+                         }
+                       }}
+                       value={customEmoji}
+                       maxLength={2}
+                     />
+                  </View>
+                </View>
+              )}
+
+              {/* Actions */}
+              {selectedMessage?.sender_id === user?.id && !selectedMessage?.is_deleted && (
+                <>
+                  <TouchableOpacity style={styles.actionSheetBtn} onPress={() => handleAction('edit')}>
+                    <Typography variant="h5" style={{marginRight: 12}}>✏️</Typography>
+                    <Typography variant="body1" color={colors.black1} style={{fontFamily: 'Rubik-Medium'}}>Edit Message</Typography>
+                  </TouchableOpacity>
+                  
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  
+                  <TouchableOpacity style={styles.actionSheetBtn} onPress={() => handleAction('delete')}>
+                    <Typography variant="h5" style={{marginRight: 12}}>🗑️</Typography>
+                    <Typography variant="body1" color={colors.danger} style={{fontFamily: 'Rubik-Medium'}}>Delete Message</Typography>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Attach Modal */}

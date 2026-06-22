@@ -61,6 +61,10 @@ class SocketService {
     this.socket?.emit('mark_read', data);
   }
 
+  emit(event: string, data: any) {
+    this.socket?.emit(event, data);
+  }
+
   on(event: string, callback: Function) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());

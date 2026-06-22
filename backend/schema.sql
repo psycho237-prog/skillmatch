@@ -76,8 +76,12 @@ CREATE TABLE IF NOT EXISTS messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL,
   content TEXT NOT NULL,
   status TEXT DEFAULT 'sent', -- 'sent', 'delivered', 'read'
+  is_edited BOOLEAN DEFAULT false,
+  is_deleted BOOLEAN DEFAULT false,
+  reactions JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
