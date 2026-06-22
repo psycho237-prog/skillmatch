@@ -30,7 +30,13 @@ router.get('/conversations/:userId', async (req, res) => {
       const messages = conv.messages || [];
       const sortedMessages = [...messages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const lastMessage = sortedMessages[0] || null;
-      const unreadCount = messages.filter(m => String(m.sender_id) !== String(userId) && m.status !== 'read').length;
+      let unreadCount = messages.filter(m => String(m.sender_id) !== String(userId) && m.status !== 'read').length;
+      
+      // Heuristic: If the current user sent the very last message, they must have opened the chat, 
+      // implicitly reading all previous messages. This prevents phantom badges if WebSocket fails.
+      if (lastMessage && String(lastMessage.sender_id) === String(userId)) {
+          unreadCount = 0;
+      }
 
       return {
         id: conv.id,
