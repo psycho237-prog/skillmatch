@@ -186,4 +186,58 @@ router.put('/messages/read', async (req, res) => {
   }
 });
 
+// POST /api/chat/backup - Upload chat backup JSON
+router.post('/backup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const backupData = req.body;
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_backups (
+        user_id UUID PRIMARY KEY REFERENCES users(id),
+        backup_data JSONB,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await query(
+      `INSERT INTO chat_backups (user_id, backup_data, updated_at) 
+       VALUES ($1, $2, NOW()) 
+       ON CONFLICT (user_id) DO UPDATE SET backup_data = EXCLUDED.backup_data, updated_at = NOW()`,
+      [userId, JSON.stringify(backupData)]
+    );
+
+    res.json({ success: true, message: 'Backup saved successfully' });
+  } catch (error) {
+    console.error('Backup upload error:', error);
+    res.status(500).json({ error: 'Failed to upload backup' });
+  }
+});
+
+// GET /api/chat/backup - Download chat backup JSON
+router.get('/backup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_backups (
+        user_id UUID PRIMARY KEY REFERENCES users(id),
+        backup_data JSONB,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    const { rows } = await query('SELECT backup_data FROM chat_backups WHERE user_id = $1', [userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No backup found' });
+    }
+
+    res.json(rows[0].backup_data);
+  } catch (error) {
+    console.error('Backup download error:', error);
+    res.status(500).json({ error: 'Failed to download backup' });
+  }
+});
+
 module.exports = router;

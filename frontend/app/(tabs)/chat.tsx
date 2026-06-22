@@ -5,6 +5,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { api, resolveImageUrl } from '../../src/services/api';
 import { socketService } from '../../src/services/socket';
+import { getLocalConversations, saveConversationsLocally, getLocalMessages } from '../../src/services/localDb';
 
 export default function ChatList() {
   const { colors, t, user } = useApp();
@@ -32,18 +33,39 @@ export default function ChatList() {
     if (!user) return;
     try {
       setLoading(true);
+      // Load local first for instant UI
+      const localConvs = await getLocalConversations();
+      if (localConvs.length > 0) {
+         setConversations(localConvs.map(c => ({
+           ...c, 
+           other_user: c.user1_id === user.id ? { id: c.user2_id } : { id: c.user1_id }, // minimal stub
+           last_message: c.last_message ? JSON.parse(c.last_message) : null
+         })));
+      }
+
       const res = await api.getConversations(user.id);
-      setConversations(res.conversations || []);
+      let apiConvs = res.conversations || [];
+      
+      // Update each conversation's last_message from local SQLite
+      for (const conv of apiConvs) {
+         const msgs = await getLocalMessages(conv.id);
+         if (msgs && msgs.length > 0) {
+            conv.last_message = msgs[msgs.length - 1];
+         }
+      }
+      
+      await saveConversationsLocally(apiConvs);
+      setConversations(apiConvs);
     } catch (e) {
       console.error(e);
-      // fallback for visual test
-      setConversations([{
-        id: '1',
-        other_user: { display_name: 'Adrian Hajdin', avatar_url: 'https://randomuser.me/api/portraits/men/32.jpg' },
-        last_message: { content: 'Is the service still available?' },
-        unread_count: 2,
-        updated_at: new Date().toISOString()
-      }]);
+      const localConvs = await getLocalConversations();
+      if (localConvs.length > 0) {
+        setConversations(localConvs.map(c => ({
+           ...c, 
+           other_user: c.user1_id === user.id ? { id: c.user2_id } : { id: c.user1_id }, 
+           last_message: c.last_message ? JSON.parse(c.last_message) : null
+        })));
+      }
     } finally {
       setLoading(false);
     }

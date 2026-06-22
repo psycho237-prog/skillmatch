@@ -376,6 +376,20 @@ class ApiService {
     return this.request('/transactions');
   }
 
+  // Chat Backup
+  async uploadChatBackup(backupData: any): Promise<any> {
+    return this.request('/chat/backup', {
+      method: 'POST',
+      body: JSON.stringify(backupData),
+    });
+  }
+
+  async getChatBackup(): Promise<any> {
+    return this.request('/chat/backup', {
+      method: 'GET',
+    });
+  }
+
   async createTransaction(data: any) {
     return this.request('/transactions', {
       method: 'POST',

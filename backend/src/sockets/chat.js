@@ -165,9 +165,10 @@ function setupChatSocket(io) {
     socket.on('message_delivered', async (data) => {
       try {
         const { conversation_id, user_id } = data;
+        // Path A: Delete messages permanently from server once delivered
         await query(
-           'UPDATE messages SET status = $1 WHERE conversation_id = $2 AND sender_id != $3 AND status = $4',
-           ['delivered', conversation_id, user_id, 'sent']
+           'DELETE FROM messages WHERE conversation_id = $1 AND sender_id != $2',
+           [conversation_id, user_id]
         );
 
         socket.to(`conv_${conversation_id}`).emit('messages_status_update', {

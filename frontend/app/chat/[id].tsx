@@ -11,6 +11,7 @@ import { icons } from '../../src/constants';
 import { socketService } from '../../src/services/socket';
 import { api, resolveImageUrl } from '../../src/services/api';
 import { Language } from '../../src/i18n/translations';
+import { getLocalMessages, saveMessagesLocally, saveMessageLocally } from '../../src/services/localDb';
 
 export default function ChatRoom() {
   const { id } = useLocalSearchParams();
@@ -78,24 +79,23 @@ export default function ChatRoom() {
       fetchMessages();
       loadConversationAndEscrow();
 
-      socketService.on('new_message', (message: any) => {
+      socketService.on('new_message', async (message: any) => {
         if (message.conversation_id === actualConvId) {
+          // Path A: Save to local SQLite
+          await saveMessageLocally(message);
+          
           setMessages(prev => {
-            // Check if we already have this exact message by ID
             if (prev.some(m => m.id === message.id)) return prev;
-            
-            // Find an optimistic message (ID has no hyphens) from the same sender with the same content
             const optimisticIndex = prev.findIndex(m => m.sender_id === message.sender_id && m.content === message.content && !m.id.includes('-'));
-            
             if (optimisticIndex !== -1) {
               const newMessages = [...prev];
               newMessages[optimisticIndex] = message;
               return newMessages;
             }
-            
             return [...prev, message];
           });
           socketService.markRead({ conversation_id: actualConvId, user_id: user.id });
+          socketService.emit('message_delivered', { conversation_id: actualConvId, user_id: user.id });
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         }
       });
@@ -150,15 +150,41 @@ export default function ChatRoom() {
 
   const fetchMessages = async () => {
     try {
+      // 1. Instant load from local DB
+      const local = await getLocalMessages(id as string);
+      setMessages(local);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+
+      // 2. Fetch pending/undelivered from Server
       const res = await api.getMessages(id as string);
-      setMessages(res.messages || []);
+      if (res.messages && res.messages.length > 0) {
+        await saveMessagesLocally(res.messages);
+        
+        // Merge and sort
+        const merged = [...local];
+        res.messages.forEach((newMsg: any) => {
+           if (!merged.find(m => m.id === newMsg.id)) {
+              merged.push(newMsg);
+           }
+        });
+        merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        setMessages(merged);
+        
+        // Mark delivered on server (so they get deleted)
+        if (user) {
+          socketService.emit('message_delivered', { conversation_id: id as string, user_id: user.id });
+          socketService.markRead({ conversation_id: id as string, user_id: user.id });
+        }
+      }
+
       if (user) {
          socketService.markRead({ conversation_id: id as string, user_id: user.id });
       }
       
-      // Determine other user from messages if not known
-      if (res.messages && res.messages.length > 0) {
-        const otherMsg = res.messages.find((m: any) => m.sender_id !== user?.id);
+      // Determine other user
+      const allMsgs = res.messages && res.messages.length > 0 ? res.messages : local;
+      if (allMsgs && allMsgs.length > 0) {
+        const otherMsg = allMsgs.find((m: any) => m.sender_id !== user?.id);
         if (otherMsg) setOtherUserId(otherMsg.sender_id);
       }
 
@@ -199,17 +225,14 @@ export default function ChatRoom() {
       reply_to_id: replyingToMessage ? replyingToMessage.id : null,
     };
 
-    setMessages(prev => [...prev, { 
-      ...messageData, 
-      id: Date.now().toString(), 
-      created_at: new Date().toISOString(),
-      sender: user,
-      reply_to_message: replyingToMessage
-    }]);
-    
+    const tempMsg = { ...messageData, id: Date.now().toString(), created_at: new Date().toISOString(), status: 'sent', sender: user, reply_to_message: replyingToMessage };
+    setMessages(prev => [...prev, tempMsg]);
     setInput('');
     setReplyingToMessage(null);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    // Path A: Save locally BEFORE emitting to socket
+    saveMessageLocally(tempMsg).catch(e => console.error('Local save error', e));
 
     if (!isNew) {
       socketService.sendMessage(messageData);
@@ -635,12 +658,15 @@ export default function ChatRoom() {
         content,
       };
 
-      setMessages(prev => [...prev, { 
+      const tempMsg = { 
         ...messageData, 
         id: Date.now().toString(), 
         created_at: new Date().toISOString(),
+        status: 'sent',
         sender: user
-      }]);
+      };
+      setMessages(prev => [...prev, tempMsg]);
+      saveMessageLocally(tempMsg).catch(e => console.error(e));
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
       if (!isNew) {
@@ -732,14 +758,17 @@ export default function ChatRoom() {
         content: sysMsg,
       });
 
-      setMessages(prev => [...prev, { 
+      const tempMsg = { 
         conversation_id: actualConvId,
         sender_id: user.id,
         content: sysMsg,
         id: Date.now().toString(), 
         created_at: new Date().toISOString(),
+        status: 'sent',
         sender: user
-      }]);
+      };
+      setMessages(prev => [...prev, tempMsg]);
+      saveMessageLocally(tempMsg).catch(e => console.error(e));
 
     } catch (error: any) {
       Alert.alert('Failed to send offer', error.message || 'Something went wrong.');

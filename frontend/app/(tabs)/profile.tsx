@@ -7,6 +7,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { icons } from '../../src/constants';
 import { socketService } from '../../src/services/socket';
+import { backupDbToCloud, restoreDbFromCloud } from '../../src/services/localDb';
 
 export default function Profile() {
   const { colors, t, user, setUser, themePreference, setThemePreference, language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useApp();
@@ -17,6 +18,8 @@ export default function Profile() {
   const [requirementsModalVisible, setRequirementsModalVisible] = useState(false);
   const [readinessData, setReadinessData] = useState<any>(null);
   const [loadingReadiness, setLoadingReadiness] = useState(false);
+  const [chatSettingsVisible, setChatSettingsVisible] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
 
   const fetchReadiness = async () => {
     if (!user) return;
@@ -80,6 +83,7 @@ export default function Profile() {
     { icon: icons.wallet, title: 'Transaction History', action: () => router.push('/transaction-history') },
     { icon: icons.shield, title: 'Requirements Checklist', action: () => { setRequirementsModalVisible(true); fetchReadiness(); } },
     { icon: icons.person, title: t('profile'), action: () => router.push('/edit-profile') },
+    { icon: icons.calendar, title: 'Chat Settings & Backup', action: () => setChatSettingsVisible(true) },
     { 
       icon: icons.bell, 
       title: t('notifications_setting'), 
@@ -236,6 +240,64 @@ export default function Profile() {
         }}
         colors={colors}
       />
+      
+      {/* Chat Settings & Backup Modal */}
+      <Modal visible={chatSettingsVisible} transparent animationType="slide" onRequestClose={() => setChatSettingsVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setChatSettingsVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: '85%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Typography variant="h4">Chat Backup (Cloud)</Typography>
+              <TouchableOpacity onPress={() => setChatSettingsVisible(false)}>
+                <Typography variant="h5" color={colors.primary}>Close</Typography>
+              </TouchableOpacity>
+            </View>
+            <Typography variant="body1" color={colors.black2} style={{marginBottom: 20}}>
+              Since messages are stored on your device for privacy, you can backup your chat history to the cloud to avoid losing them.
+            </Typography>
+
+            <TouchableOpacity 
+              style={{ padding: 16, backgroundColor: colors.primary, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
+              onPress={async () => {
+                 setBackupLoading(true);
+                 try {
+                   await backupDbToCloud();
+                   Alert.alert('Success', 'Chats backed up to cloud successfully.');
+                 } catch (e: any) {
+                   Alert.alert('Error', e.message);
+                 } finally {
+                   setBackupLoading(false);
+                 }
+              }}
+              disabled={backupLoading}
+            >
+               <Typography variant="h6" color="#FFF">{backupLoading ? 'Backing up...' : 'Backup Chats Now'}</Typography>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ padding: 16, backgroundColor: colors.card, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}
+              onPress={async () => {
+                 setBackupLoading(true);
+                 try {
+                   const success = await restoreDbFromCloud();
+                   if (success) {
+                      Alert.alert('Success', 'Chats restored from cloud successfully. Please restart the app or refresh chats.');
+                   } else {
+                      Alert.alert('Not Found', 'No backup found on the cloud.');
+                   }
+                 } catch (e: any) {
+                   Alert.alert('Error', e.message);
+                 } finally {
+                   setBackupLoading(false);
+                 }
+              }}
+              disabled={backupLoading}
+            >
+               <Typography variant="h6" color={colors.primary}>{backupLoading ? 'Restoring...' : 'Restore Chats'}</Typography>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* Requirements Checklist Modal */}
       <Modal visible={requirementsModalVisible} transparent animationType="slide" onRequestClose={() => setRequirementsModalVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setRequirementsModalVisible(false)}>
