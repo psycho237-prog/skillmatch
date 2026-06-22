@@ -115,11 +115,16 @@ export default function Profile() {
         value={user?.chat_backup_enabled || false} 
         onValueChange={async (val) => {
           if (!user) return;
+          // Optimistic update so it toggles instantly
+          setUser({ ...user, chat_backup_enabled: val });
           try {
             const res = await api.updateUser(user.id, { chat_backup_enabled: val });
             setUser(res.user);
           } catch (e) {
-            console.error(e);
+            console.error('Failed to update chat backup:', e);
+            // Revert on failure
+            setUser({ ...user, chat_backup_enabled: !val });
+            Alert.alert('Error', 'Failed to update chat backup setting on the server. Please ensure the backend is deployed.');
           }
         }} 
         trackColor={{ false: colors.border, true: colors.primary }}
