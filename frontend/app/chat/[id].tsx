@@ -840,7 +840,7 @@ export default function ChatRoom() {
           }}
         >
           <View style={[styles.bubbleContainer, isMe ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
-            {!isSystem && <Image source={{ uri: item.sender?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} style={styles.bubbleAvatar} />}
+            {!isSystem && !isMe && <Image source={{ uri: item.sender?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} style={styles.bubbleAvatar} />}
             <View style={[
               styles.msgBubble, 
               isImage && { paddingHorizontal: 4, paddingVertical: 4, backgroundColor: 'transparent' },
@@ -888,7 +888,7 @@ export default function ChatRoom() {
               )}
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isSystem ? 'center' : isMe ? 'flex-end' : 'flex-start', marginTop: 4, marginLeft: isMe || isSystem ? 0 : 44, marginRight: isMe && !isSystem ? 44 : 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isSystem ? 'center' : isMe ? 'flex-end' : 'flex-start', marginTop: 4, marginLeft: isMe || isSystem ? 0 : 44, marginRight: 0 }}>
             <Typography variant="caption" color={colors.black3} style={{ marginRight: isMe ? 4 : 0 }}>
               {formatTime(item.created_at)}
             </Typography>
