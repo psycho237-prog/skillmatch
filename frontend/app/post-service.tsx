@@ -9,7 +9,7 @@ import { Button } from '../src/components/Button';
 import { api } from '../src/services/api';
 import { icons } from '../src/constants';
 
-const CATEGORIES = ['Development', 'Design', 'Repair', 'Cleaning', 'Photography', 'Music', 'Other'];
+// Categories will be loaded dynamically
 
 const PAWAPAY_COUNTRIES = [
   { name: 'Cameroon (XAF)', code: 'CMR', currency: 'XAF' },
@@ -41,12 +41,28 @@ export default function PostService() {
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [serviceType, setServiceType] = useState<'SKILL_TO_CASH' | 'SKILL_TO_SKILL'>('SKILL_TO_CASH');
   const [holdupAmount, setHoldupAmount] = useState('');
+  const [categoriesList, setCategoriesList] = useState<{name: string}[]>([]);
 
   useEffect(() => {
+    fetchCategories();
     if (isEditMode && id) {
       fetchServiceDetails();
     }
   }, [id]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.getCategories();
+      if (res?.categories) {
+        setCategoriesList(res.categories);
+        if (res.categories.length > 0 && !isEditMode) {
+          setCategory(res.categories[0].name);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load categories', e);
+    }
+  };
 
   const fetchServiceDetails = async () => {
     try {
@@ -234,16 +250,16 @@ export default function PostService() {
 
           <Typography variant="body2" weight="bold" color={colors.black2} style={styles.label}>{t('category')}</Typography>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-            {CATEGORIES.map(cat => (
+            {categoriesList.map(cat => (
               <TouchableOpacity 
-                key={cat} 
+                key={cat.name} 
                 style={[
                   styles.categoryChip, 
-                  { backgroundColor: cat === category ? colors.primary : colors.card, borderColor: colors.border }
+                  { backgroundColor: cat.name === category ? colors.primary : colors.card, borderColor: colors.border }
                 ]}
-                onPress={() => setCategory(cat)}
+                onPress={() => setCategory(cat.name)}
               >
-                <Typography variant="body2" color={cat === category ? 'white' : colors.black1}>{t(cat.toLowerCase() as any) || cat}</Typography>
+                <Typography variant="body2" color={cat.name === category ? 'white' : colors.black1}>{t(cat.name.toLowerCase() as any) || cat.name}</Typography>
               </TouchableOpacity>
             ))}
           </ScrollView>

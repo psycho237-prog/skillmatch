@@ -21,11 +21,12 @@ export default function Explore() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const [activePaymentFilter, setActivePaymentFilter] = useState('All');
+  const [categories, setCategories] = useState<{name: string}[]>([{ name: 'All' }]);
 
-  const categories = ['All', 'Development', 'Design', 'Repair', 'Cleaning', 'Photography', 'Music'];
   const paymentFilters = ['All', 'Skill to Skill', 'Cash to Skill'];
 
   useEffect(() => {
+    fetchCategories();
     if (query) {
       handleSearch();
     } else {
@@ -33,6 +34,18 @@ export default function Explore() {
       handleSearch('');
     }
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.getCategories();
+      if (res?.categories) {
+        const fetchedCats = res.categories.filter((c: any) => c.name.toLowerCase() !== 'all');
+        setCategories([{ name: 'All' }, ...fetchedCats]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSearch = async (overrideQuery?: string, overrideCategory?: string, overridePayment?: string) => {
     const qToUse = overrideQuery !== undefined ? overrideQuery : query;
@@ -173,22 +186,31 @@ export default function Explore() {
         
         <Typography variant="body1" weight="medium" style={{ marginBottom: 8, marginTop: 8 }}>{t('category') as string || 'Category'}</Typography>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterRow, { paddingBottom: 8 }]}>
-          {categories.map((cat) => (
-            <TouchableOpacity 
-              key={cat} 
-              style={[
-                styles.categoryPill, 
-                { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
-              ]}
-              onPress={() => {
-                setActiveFilter(cat);
-                handleSearch(query, cat, activePaymentFilter);
-              }}
-            >
-              <Typography variant="body2" color={activeFilter === cat ? '#FFF' : colors.black1}>{cat}</Typography>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {categories.map((cat, idx) => {
+                const catName = cat.name;
+                const isActive = activeFilter === catName;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.filterChip,
+                      { backgroundColor: isActive ? colors.primary : colors.inputBg }
+                    ]}
+                    onPress={() => {
+                        setActiveFilter(catName);
+                        handleSearch(query, catName, activePaymentFilter);
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      weight="medium"
+                      color={isActive ? '#FFF' : colors.black2}
+                    >
+                      {t((catName.toLowerCase()) as any) || catName}
+                    </Typography>
+                  </TouchableOpacity>
+                );
+              })}</ScrollView>
         
         <Typography variant="body1" weight="medium" style={{ marginBottom: 8, marginTop: 16 }}>{t('payment_type') as string || 'Payment Type'}</Typography>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>

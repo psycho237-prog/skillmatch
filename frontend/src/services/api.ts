@@ -125,6 +125,19 @@ class ApiService {
     return this.request('/services/categories');
   }
 
+  async addCategory(name: string, icon?: string, color?: string) {
+    return this.request('/admin/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name, icon, color }),
+    });
+  }
+
+  async deleteCategory(id: number) {
+    return this.request(`/admin/categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getServiceById(id: string, userId?: string) {
     const query = userId ? `?user_id=${userId}` : '';
     return this.request(`/services/${id}${query}`);

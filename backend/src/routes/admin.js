@@ -468,4 +468,45 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+// ==========================================
+// 7. GESTION DES CATÉGORIES
+// ==========================================
+router.post('/categories', async (req, res) => {
+  try {
+    const { name, icon, color } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    const result = await query(
+      'INSERT INTO categories (name, icon, color) VALUES ($1, $2, $3) RETURNING *',
+      [name, icon || 'grid-outline', color || '#000000']
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    if (error.code === '23505') { // Unique constraint violation
+      return res.status(400).json({ error: 'Category already exists' });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First check if there are any services using this category
+    const checkServices = await query('SELECT count(*) FROM services WHERE category = (SELECT name FROM categories WHERE id = $1)', [id]);
+    if (parseInt(checkServices.rows[0].count) > 0) {
+      return res.status(400).json({ error: 'Cannot delete category: there are services using it.' });
+    }
+
+    const result = await query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

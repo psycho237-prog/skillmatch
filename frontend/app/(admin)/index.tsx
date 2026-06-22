@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Activi
 import { api } from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../src/contexts/AppContext';
+import { typography } from '../../src/components/Typography';
 
 const spacing = {
   xs: 4,
@@ -22,6 +23,10 @@ export default function AdminDashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('grid-outline');
+  const [isAddingCat, setIsAddingCat] = useState(false);
   
   const styles = createStyles(colors);
 
@@ -33,18 +38,52 @@ export default function AdminDashboard() {
     try {
       setIsLoading(true);
       // Try to fetch both, ignore failure if backend is not deployed
-      const [statsRes, settingsRes] = await Promise.all([
+      const [statsRes, settingsRes, catsRes] = await Promise.all([
         api.request('/admin/stats').catch(() => null),
-        api.getAdminSettings().catch(() => null)
+        api.getAdminSettings().catch(() => null),
+        api.getCategories().catch(() => null)
       ]);
       
       if (statsRes?.stats) setStats(statsRes.stats);
       if (settingsRes?.settings) setSettings(settingsRes.settings);
+      if (catsRes?.categories) setCategories(catsRes.categories);
     } catch (error) {
       console.error(error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    try {
+      setIsAddingCat(true);
+      const res = await api.addCategory(newCatName.trim(), newCatIcon, '#000000');
+      if (res && res.id) {
+        setCategories([...categories, res]);
+        setNewCatName('');
+        Alert.alert('Success', 'Category added.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to add category');
+    } finally {
+      setIsAddingCat(false);
+    }
+  };
+
+  const handleDeleteCategory = (id: number) => {
+    Alert.alert('Delete Category', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await api.deleteCategory(id);
+            setCategories(categories.filter(c => c.id !== id));
+            Alert.alert('Success', 'Category deleted.');
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Cannot delete this category');
+          }
+      }}
+    ]);
   };
 
   const handleSaveSettings = async () => {
@@ -149,6 +188,45 @@ export default function AdminDashboard() {
           <StatCard icon="briefcase-outline" title="Services" value={stats?.totalServices || 0} color={colors.secondary} />
           <StatCard icon="star-outline" title="Pro Users" value={stats?.proUsers || 0} color="#F59E0B" />
           <StatCard icon="rocket-outline" title="Featured" value={stats?.featuredServices || 0} color="#8B5CF6" />
+        </View>
+      </View>
+
+      {/* Category Management */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="grid-outline" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Manage Categories</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Add New Category</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={newCatName}
+              onChangeText={setNewCatName}
+              placeholder="Category Name"
+              placeholderTextColor={colors.gray}
+            />
+            <TouchableOpacity style={styles.saveButton} onPress={handleAddCategory} disabled={isAddingCat}>
+              {isAddingCat ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={styles.saveButtonText}>Add</Text>}
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ marginTop: spacing.lg }}>
+            <Text style={styles.label}>Existing Categories</Text>
+            {categories.map((cat, idx) => (
+              <View key={`cat-${cat.id || idx}`} style={styles.catRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name={cat.icon as any} size={20} color={colors.text} style={{ marginRight: spacing.sm }} />
+                  <Text style={{ color: colors.text }}>{cat.name}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id)}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -278,5 +356,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     ...typography.body2,
     color: colors.gray,
     marginTop: 4,
+  },
+  catRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
 });
