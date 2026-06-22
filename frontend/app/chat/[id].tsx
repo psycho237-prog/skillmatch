@@ -20,6 +20,7 @@ export default function ChatRoom() {
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   
   // Transaction states
   const [offerAmount, setOfferAmount] = useState('');
@@ -74,6 +75,12 @@ export default function ChatRoom() {
           setMessages(prev => [...prev, message]);
           socketService.markRead({ conversation_id: actualConvId, user_id: user.id });
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        }
+      });
+
+      socketService.on('user_status', (data: any) => {
+        if (data.userId === otherUserId || data.userId === id.toString().split('_')[1]) {
+          setIsOnline(data.online);
         }
       });
     } else {
@@ -711,9 +718,16 @@ export default function ChatRoom() {
             )}
           </View>
         </View>
-        <Typography variant="caption" color={colors.black3} style={{ marginTop: 4, textAlign: isSystem ? 'center' : isMe ? 'right' : 'left', marginLeft: isMe || isSystem ? 0 : 44, marginRight: isMe && !isSystem ? 44 : 0 }}>
-          {formatTime(item.created_at)}
-        </Typography>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isSystem ? 'center' : isMe ? 'flex-end' : 'flex-start', marginTop: 4, marginLeft: isMe || isSystem ? 0 : 44, marginRight: isMe && !isSystem ? 44 : 0 }}>
+          <Typography variant="caption" color={colors.black3} style={{ marginRight: isMe ? 4 : 0 }}>
+            {formatTime(item.created_at)}
+          </Typography>
+          {isMe && !isSystem && (
+            <Typography variant="caption" color={item.status === 'read' ? '#007AFF' : colors.black3}>
+              {item.status === 'read' ? '✓✓' : item.status === 'delivered' ? '✓✓' : '✓'}
+            </Typography>
+          )}
+        </View>
       </View>
     );
   };
@@ -743,6 +757,9 @@ export default function ChatRoom() {
         
         <View style={styles.titleContainer}>
           <Typography variant="h6" style={styles.title}>{t('conversation')}</Typography>
+          <Typography variant="caption" color={isOnline ? '#34C759' : colors.black3} style={{ textAlign: 'center' }}>
+            {isOnline ? 'Online' : 'Offline'}
+          </Typography>
         </View>
 
         <View style={styles.headerRight}>

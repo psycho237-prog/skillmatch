@@ -114,6 +114,24 @@ export default function Profile() {
       action: () => setThemeModalVisible(true),
       rightText: getThemeText()
     },
+    {
+      icon: icons.info,
+      title: 'Chat Backup',
+      action: undefined,
+      rightElement: <Switch 
+        value={user?.chat_backup_enabled || false} 
+        onValueChange={async (val) => {
+          if (!user) return;
+          try {
+            const res = await api.updateUser(user.id, { chat_backup_enabled: val });
+            setUser(res.user);
+          } catch (e) {
+            console.error(e);
+          }
+        }} 
+        trackColor={{ false: colors.border, true: colors.primary }}
+      />
+    },
     { icon: icons.info, title: t('help_center'), action: () => alert('Help Center: Coming soon!') },
     { icon: icons.people, title: t('invite_friends'), action: handleInvite },
   ];

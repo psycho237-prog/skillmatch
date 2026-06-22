@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   google_id TEXT,
   notification_enabled BOOLEAN DEFAULT true,
+  chat_backup_enabled BOOLEAN DEFAULT false,
   language TEXT DEFAULT 'en',
   theme TEXT DEFAULT 'system',
   push_token TEXT,
@@ -76,7 +77,7 @@ CREATE TABLE IF NOT EXISTS messages (
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT false,
+  status TEXT DEFAULT 'sent', -- 'sent', 'delivered', 'read'
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -119,7 +120,6 @@ CREATE POLICY "Allow all for service role" ON categories FOR ALL USING (true);
 
 -- Seed categories
 INSERT INTO categories (name, icon, color) VALUES
-  ('All', 'grid', '#0061FF'),
   ('Development', 'code', '#6366F1'),
   ('Design', 'palette', '#EC4899'),
   ('Writing', 'pencil', '#F59E0B'),

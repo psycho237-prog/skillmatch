@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { sendPushNotification } = require('../config/notifications');
 
 const onlineUsers = new Map(); // userId -> socketId
 
@@ -32,8 +33,8 @@ function setupChatSocket(io) {
 
         // Save message to Postgres
         const { rows: msgRows } = await query(
-          'INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at) VALUES ($1, $2, $3, false, NOW()) RETURNING *',
-          [conversation_id, sender_id, content]
+          'INSERT INTO messages (conversation_id, sender_id, content, status, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+          [conversation_id, sender_id, content, 'sent']
         );
         let message = msgRows[0];
 
@@ -84,18 +85,38 @@ function setupChatSocket(io) {
       });
     });
 
+    // Mark messages as delivered
+    socket.on('message_delivered', async (data) => {
+      try {
+        const { conversation_id, user_id } = data;
+        await query(
+           'UPDATE messages SET status = $1 WHERE conversation_id = $2 AND sender_id != $3 AND status = $4',
+           ['delivered', conversation_id, user_id, 'sent']
+        );
+
+        socket.to(`conv_${conversation_id}`).emit('messages_status_update', {
+          conversation_id,
+          status: 'delivered',
+          updated_by: user_id,
+        });
+      } catch (error) {
+        console.error('Mark delivered error:', error);
+      }
+    });
+
     // Mark messages as read
     socket.on('mark_read', async (data) => {
       try {
         const { conversation_id, user_id } = data;
         await query(
-           'UPDATE messages SET is_read = true WHERE conversation_id = $1 AND sender_id != $2 AND is_read = false',
-           [conversation_id, user_id]
+           'UPDATE messages SET status = $1 WHERE conversation_id = $2 AND sender_id != $3 AND status != $1',
+           ['read', conversation_id, user_id]
         );
 
-        socket.to(`conv_${conversation_id}`).emit('messages_read', {
+        socket.to(`conv_${conversation_id}`).emit('messages_status_update', {
           conversation_id,
-          read_by: user_id,
+          status: 'read',
+          updated_by: user_id,
         });
       } catch (error) {
         console.error('Mark read error:', error);

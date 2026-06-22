@@ -56,7 +56,7 @@ function expandSearchTerms(searchQuery) {
 // POST /api/search - Intelligent contextual search
 router.post('/', async (req, res) => {
   try {
-    const { query: searchQuery, category, min_price, max_price, location, limit = 20, offset = 0, user_id } = req.body;
+    const { query: searchQuery, category, min_price, max_price, location, payment_type, limit = 20, offset = 0, user_id } = req.body;
 
     if (!searchQuery || searchQuery.trim().length === 0) {
       return res.status(400).json({ error: 'Search query is required' });
@@ -101,6 +101,11 @@ router.post('/', async (req, res) => {
     if (location) {
       sql += ` AND s.location ILIKE $${paramCount++}`;
       params.push(`%${location}%`);
+    }
+    if (payment_type === 'skill') {
+      sql += ` AND s.price_type = 'exchange'`;
+    } else if (payment_type === 'cash') {
+      sql += ` AND s.price_type != 'exchange'`;
     }
 
     sql += ` ORDER BY s.rating DESC LIMIT $${paramCount++} OFFSET $${paramCount}`;

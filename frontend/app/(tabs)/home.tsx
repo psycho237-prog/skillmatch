@@ -43,7 +43,8 @@ export default function Home() {
 
       setFeatured(featRes.services || []);
       setRecommended(recRes.services || []);
-      setCategories([{ name: 'All' }, ...(catRes.categories || [])]);
+      const fetchedCats = (catRes.categories || []).filter((c: any) => c.name.toLowerCase() !== 'all');
+      setCategories([{ name: 'All' }, ...fetchedCats]);
     } catch (e) {
       console.error(e);
     } finally {

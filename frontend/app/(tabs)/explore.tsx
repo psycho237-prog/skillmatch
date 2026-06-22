@@ -17,8 +17,10 @@ export default function Explore() {
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [activePaymentFilter, setActivePaymentFilter] = useState('All');
 
   const categories = ['All', 'Development', 'Design', 'Repair', 'Cleaning', 'Photography', 'Music'];
+  const paymentFilters = ['All', 'Skill to Skill', 'Cash to Skill'];
 
   useEffect(() => {
     if (query) {
@@ -29,17 +31,23 @@ export default function Explore() {
     }
   }, []);
 
-  const handleSearch = async (overrideQuery?: string, overrideCategory?: string) => {
+  const handleSearch = async (overrideQuery?: string, overrideCategory?: string, overridePayment?: string) => {
     const qToUse = overrideQuery !== undefined ? overrideQuery : query;
     const cToUse = overrideCategory !== undefined ? overrideCategory : activeFilter;
+    const pToUse = overridePayment !== undefined ? overridePayment : activePaymentFilter;
 
     try {
       setLoading(true);
+      const payload: any = {};
+      if (cToUse !== 'All') payload.category = cToUse;
+      if (pToUse === 'Skill to Skill') payload.payment_type = 'skill';
+      if (pToUse === 'Cash to Skill') payload.payment_type = 'cash';
+
       if (!qToUse.trim()) {
-         const res = await api.getServices({ category: cToUse }, user?.id);
+         const res = await api.getServices(payload, user?.id);
          setResults(res.services || []);
       } else {
-         const res = await api.searchServices(qToUse, { category: cToUse }, user?.id);
+         const res = await api.searchServices(qToUse, payload, user?.id);
          setResults(res.services || []);
       }
     } catch (e) {
@@ -105,23 +113,42 @@ export default function Explore() {
       </View>
 
       {showFilters && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {categories.map((cat) => (
-            <TouchableOpacity 
-              key={cat} 
-              style={[
-                styles.categoryPill, 
-                { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
-              ]}
-              onPress={() => {
-                setActiveFilter(cat);
-                handleSearch(query, cat);
-              }}
-            >
-              <Typography variant="body2" color={activeFilter === cat ? '#FFF' : colors.black1}>{cat}</Typography>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterRow, { paddingBottom: 8 }]}>
+            {categories.map((cat) => (
+              <TouchableOpacity 
+                key={cat} 
+                style={[
+                  styles.categoryPill, 
+                  { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
+                ]}
+                onPress={() => {
+                  setActiveFilter(cat);
+                  handleSearch(query, cat, activePaymentFilter);
+                }}
+              >
+                <Typography variant="body2" color={activeFilter === cat ? '#FFF' : colors.black1}>{cat}</Typography>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {paymentFilters.map((pf) => (
+              <TouchableOpacity 
+                key={pf} 
+                style={[
+                  styles.categoryPill, 
+                  { backgroundColor: activePaymentFilter === pf ? colors.primary : colors.card, borderColor: colors.border }
+                ]}
+                onPress={() => {
+                  setActivePaymentFilter(pf);
+                  handleSearch(query, activeFilter, pf);
+                }}
+              >
+                <Typography variant="body2" color={activePaymentFilter === pf ? '#FFF' : colors.black1}>{pf}</Typography>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       <Typography variant="h5" style={styles.resultCount}>

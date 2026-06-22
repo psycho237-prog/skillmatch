@@ -13,7 +13,7 @@ router.get('/conversations/:userId', async (req, res) => {
              json_build_object('id', u1.id, 'display_name', u1.display_name, 'avatar_url', u1.avatar_url) as user1,
              json_build_object('id', u2.id, 'display_name', u2.display_name, 'avatar_url', u2.avatar_url) as user2,
              (
-               SELECT json_agg(json_build_object('content', m.content, 'created_at', m.created_at, 'sender_id', m.sender_id, 'is_read', m.is_read) ORDER BY m.created_at ASC)
+               SELECT json_agg(json_build_object('content', m.content, 'created_at', m.created_at, 'sender_id', m.sender_id, 'status', m.status) ORDER BY m.created_at ASC)
                FROM messages m WHERE m.conversation_id = c.id
              ) as messages
       FROM conversations c
@@ -30,7 +30,7 @@ router.get('/conversations/:userId', async (req, res) => {
       const messages = conv.messages || [];
       const sortedMessages = [...messages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const lastMessage = sortedMessages[0] || null;
-      const unreadCount = messages.filter(m => m.sender_id !== userId && !m.is_read).length;
+      const unreadCount = messages.filter(m => m.sender_id !== userId && m.status !== 'read').length;
 
       return {
         id: conv.id,
@@ -112,11 +112,6 @@ router.post('/conversations', async (req, res) => {
       WHERE ((user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1))
     `;
     const params = [user1_id, user2_id];
-    
-    if (service_id) {
-      checkSql += ` AND service_id = $3`;
-      params.push(service_id);
-    }
 
     const { rows: existing } = await query(checkSql, params);
 
@@ -148,8 +143,8 @@ router.post('/messages', async (req, res) => {
     }
 
     const { rows: messageRows } = await query(`
-      INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
-      VALUES ($1, $2, $3, false, NOW())
+      INSERT INTO messages (conversation_id, sender_id, content, status, created_at)
+      VALUES ($1, $2, $3, 'sent', NOW())
       RETURNING *
     `, [conversation_id, sender_id, content]);
 
@@ -176,8 +171,8 @@ router.put('/messages/read', async (req, res) => {
 
     await query(`
       UPDATE messages 
-      SET is_read = true 
-      WHERE conversation_id = $1 AND sender_id != $2 AND is_read = false
+      SET status = 'read' 
+      WHERE conversation_id = $1 AND sender_id != $2 AND status != 'read'
     `, [conversation_id, user_id]);
 
     res.json({ message: 'Messages marked as read' });
