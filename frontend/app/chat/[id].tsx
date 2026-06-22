@@ -225,10 +225,10 @@ export default function ChatRoom() {
       setInput(selectedMessage.content);
       setEditingMessageId(selectedMessage.id);
     } else if (action === 'delete') {
-      Alert.alert('Delete', 'Delete this message?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-            setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, content: 'This message was deleted', is_deleted: true } : m));
+      Alert.alert(t('delete', { defaultValue: 'Delete' }), t('delete_message_confirm_msg', { defaultValue: 'Delete this message?' }), [
+        { text: t('cancel', { defaultValue: 'Cancel' }), style: 'cancel' },
+        { text: t('delete', { defaultValue: 'Delete' }), style: 'destructive', onPress: () => {
+            setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, content: t('message_deleted', { defaultValue: 'This message was deleted' }), is_deleted: true } : m));
             socketService.emit('delete_message', {
               message_id: selectedMessage.id,
               user_id: user.id,
@@ -865,7 +865,7 @@ export default function ChatRoom() {
             </Typography>
             {item.is_edited && !item.is_deleted && (
               <Typography variant="caption" color={colors.black3} style={{ marginRight: 4, fontStyle: 'italic' }}>
-                (edited)
+                {t('edited_tag', { defaultValue: '(edited)' })}
               </Typography>
             )}
             {isMe && !isSystem && (
@@ -1099,14 +1099,14 @@ export default function ChatRoom() {
                 <>
                   <TouchableOpacity style={styles.actionSheetBtn} onPress={() => handleAction('edit')}>
                     <Typography variant="h5" style={{marginRight: 12}}>✏️</Typography>
-                    <Typography variant="body1" color={colors.black1} style={{fontFamily: 'Rubik-Medium'}}>Edit Message</Typography>
+                    <Typography variant="body1" color={colors.black1} style={{fontFamily: 'Rubik-Medium'}}>{t('edit_message', { defaultValue: 'Edit Message' })}</Typography>
                   </TouchableOpacity>
                   
                   <View style={[styles.divider, { backgroundColor: colors.border }]} />
                   
                   <TouchableOpacity style={styles.actionSheetBtn} onPress={() => handleAction('delete')}>
                     <Typography variant="h5" style={{marginRight: 12}}>🗑️</Typography>
-                    <Typography variant="body1" color={colors.danger} style={{fontFamily: 'Rubik-Medium'}}>Delete Message</Typography>
+                    <Typography variant="body1" color={colors.danger} style={{fontFamily: 'Rubik-Medium'}}>{t('delete_message', { defaultValue: 'Delete Message' })}</Typography>
                   </TouchableOpacity>
                 </>
               )}

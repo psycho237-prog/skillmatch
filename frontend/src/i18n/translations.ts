@@ -85,6 +85,12 @@ export const translations = {
     delete_chat_confirm: 'Are you sure you want to delete this conversation?',
     delete: 'Delete',
     chat_settings: 'Chat Settings',
+    edit_message: 'Edit Message',
+    delete_message: 'Delete Message',
+    delete_message_confirm_msg: 'Delete this message?',
+    message_deleted: 'This message was deleted',
+    edited_tag: '(edited)',
+    reply: 'Reply',
 
     // Profile
     profile: 'Profile',
@@ -229,6 +235,12 @@ export const translations = {
     delete_chat_confirm: 'Êtes-vous sûr de vouloir supprimer cette conversation ?',
     delete: 'Supprimer',
     chat_settings: 'Paramètres du chat',
+    edit_message: 'Modifier le message',
+    delete_message: 'Supprimer le message',
+    delete_message_confirm_msg: 'Supprimer ce message ?',
+    message_deleted: 'Ce message a été supprimé',
+    edited_tag: '(modifié)',
+    reply: 'Répondre',
 
     // Profile
     profile: 'Profil',
@@ -373,6 +385,12 @@ export const translations = {
     delete_chat_confirm: 'Sind Sie sicher, dass Sie dieses Gespräch löschen möchten?',
     delete: 'Löschen',
     chat_settings: 'Chat-Einstellungen',
+    edit_message: 'Nachricht bearbeiten',
+    delete_message: 'Nachricht löschen',
+    delete_message_confirm_msg: 'Diese Nachricht löschen?',
+    message_deleted: 'Diese Nachricht wurde gelöscht',
+    edited_tag: '(bearbeitet)',
+    reply: 'Antworten',
 
     // Profile
     profile: 'Profil',
@@ -517,6 +535,12 @@ export const translations = {
     delete_chat_confirm: '您确定要删除此对话吗？',
     delete: '删除',
     chat_settings: '聊天设置',
+    edit_message: '编辑消息',
+    delete_message: '删除消息',
+    delete_message_confirm_msg: '删除此消息？',
+    message_deleted: '此消息已被删除',
+    edited_tag: '(已编辑)',
+    reply: '回复',
 
     // Profile
     profile: '个人资料',
@@ -661,6 +685,12 @@ export const translations = {
     delete_chat_confirm: '¿Estás seguro de que deseas eliminar esta conversación?',
     delete: 'Eliminar',
     chat_settings: 'Ajustes del chat',
+    edit_message: 'Editar mensaje',
+    delete_message: 'Eliminar mensaje',
+    delete_message_confirm_msg: '¿Eliminar este mensaje?',
+    message_deleted: 'Este mensaje fue eliminado',
+    edited_tag: '(editado)',
+    reply: 'Responder',
 
     // Profile
     profile: 'Perfil',
@@ -805,6 +835,12 @@ export const translations = {
     delete_chat_confirm: 'Вы уверены, что хотите удалить этот разговор?',
     delete: 'Удалить',
     chat_settings: 'Настройки чата',
+    edit_message: 'Редактировать сообщение',
+    delete_message: 'Удалить сообщение',
+    delete_message_confirm_msg: 'Удалить это сообщение?',
+    message_deleted: 'Это сообщение было удалено',
+    edited_tag: '(изменено)',
+    reply: 'Ответить',
 
     // Profile
     profile: 'Профиль',

@@ -91,6 +91,14 @@ export default function Home() {
     }
   };
 
+  const currentHour = new Date().getHours();
+  let greetingKey = 'good_evening';
+  if (currentHour >= 5 && currentHour < 12) {
+    greetingKey = 'good_morning';
+  } else if (currentHour >= 12 && currentHour < 18) {
+    greetingKey = 'good_afternoon';
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -103,7 +111,7 @@ export default function Home() {
               style={styles.avatar}
             />
             <View style={styles.greeting}>
-              <Typography variant="caption" color={colors.black3}>{t('good_morning')}</Typography>
+              <Typography variant="caption" color={colors.black3}>{t(greetingKey as TranslationKey)}</Typography>
               <Typography variant="h5" color={colors.black1}>{user?.display_name || 'Guest'}</Typography>
             </View>
           </View>
