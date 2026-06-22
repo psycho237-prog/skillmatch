@@ -87,23 +87,12 @@ export default function Profile() {
     { 
       icon: icons.bell, 
       title: t('notifications_setting'), 
-      action: () => {
-        (socketService as any).socket?.emit('new_message', {
-          conversation_id: 'test',
-          sender_id: 'system',
-          content: 'This is a test notification! It works perfectly.'
-        });
-        
-        (socketService as any).socket?.io.engine.onPacket({
-          type: 2, 
-          nsp: '/', 
-          data: ['new_message', {
-            conversation_id: 'test',
-            sender_id: 'system',
-            content: 'Hello! This is a test notification from Swapster.'
-          }]
-        });
-      }
+      action: undefined,
+      rightElement: <Switch 
+        value={notificationsEnabled} 
+        onValueChange={(val) => setNotificationsEnabled(val)} 
+        trackColor={{ false: colors.border, true: colors.primary }}
+      />
     },
     { icon: icons.shield, title: t('security'), action: () => alert('Security Settings: Coming soon!') },
     { 
