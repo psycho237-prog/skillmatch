@@ -51,6 +51,7 @@ export default function ChatList() {
          const msgs = await getLocalMessages(conv.id);
          if (msgs && msgs.length > 0) {
             conv.last_message = msgs[msgs.length - 1];
+            conv.unread_count = msgs.filter((m: any) => String(m.sender_id) !== String(user.id) && m.status !== 'read' && !m.is_deleted).length;
          }
       }
       

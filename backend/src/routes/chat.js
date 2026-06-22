@@ -30,7 +30,7 @@ router.get('/conversations/:userId', async (req, res) => {
       const messages = conv.messages || [];
       const sortedMessages = [...messages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const lastMessage = sortedMessages[0] || null;
-      const unreadCount = messages.filter(m => m.sender_id !== userId && m.status !== 'read').length;
+      const unreadCount = messages.filter(m => String(m.sender_id) !== String(userId) && m.status !== 'read').length;
 
       return {
         id: conv.id,
