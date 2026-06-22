@@ -1,8 +1,22 @@
-import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 
-let db: SQLite.SQLiteDatabase | null = null;
+let SQLite: any;
+if (Platform.OS !== 'web') {
+  SQLite = require('expo-sqlite');
+}
+
+let db: any = null;
 
 export const getDb = async () => {
+  if (Platform.OS === 'web') {
+    return {
+      execAsync: async () => {},
+      getAllAsync: async () => [],
+      runAsync: async () => {},
+      withTransactionAsync: async (cb: any) => await cb(),
+    };
+  }
+
   if (!db) {
     db = await SQLite.openDatabaseAsync('skillmatch_chats.db');
     
