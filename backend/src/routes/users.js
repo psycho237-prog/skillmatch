@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 // GET /api/users/:id - Get user profile
 router.get('/:id', async (req, res) => {
   try {
-    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, language, theme, push_token, created_at, correspondent, currency, country, identity_verified, average_rating, total_ratings FROM users WHERE id = $1', [req.params.id]);
+    const { rows } = await query('SELECT id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, push_token, created_at, correspondent, currency, country, identity_verified, average_rating, total_ratings FROM users WHERE id = $1', [req.params.id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -21,7 +21,7 @@ router.get('/:id', async (req, res) => {
 // PUT /api/users/:id - Update user profile
 router.put('/:id', async (req, res) => {
   try {
-    const { display_name, avatar_url, notification_enabled, language, theme, identity_verified, correspondent, currency, country } = req.body;
+    const { display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, identity_verified, correspondent, currency, country } = req.body;
 
     const updates = [];
     const params = [];
@@ -38,6 +38,10 @@ router.put('/:id', async (req, res) => {
     if (notification_enabled !== undefined) {
       updates.push(`notification_enabled = $${paramCount++}`);
       params.push(notification_enabled);
+    }
+    if (chat_backup_enabled !== undefined) {
+      updates.push(`chat_backup_enabled = $${paramCount++}`);
+      params.push(chat_backup_enabled);
     }
     if (language !== undefined) {
       updates.push(`language = $${paramCount++}`);
@@ -75,7 +79,7 @@ router.put('/:id', async (req, res) => {
     updates.push(`updated_at = NOW()`);
 
     params.push(req.params.id);
-    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, language, theme, push_token, correspondent, currency, country, identity_verified, average_rating, total_ratings`;
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone_number, display_name, avatar_url, notification_enabled, chat_backup_enabled, language, theme, push_token, correspondent, currency, country, identity_verified, average_rating, total_ratings`;
 
     const { rows } = await query(sql, params);
 
