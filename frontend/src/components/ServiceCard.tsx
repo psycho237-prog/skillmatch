@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Image, TouchableOpacity, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext';
+import { hapticFeedback } from '../utils/haptics';
 import { Typography } from './Typography';
 import { icons } from '../constants';
 import { resolveImageUrl } from '../services/api';

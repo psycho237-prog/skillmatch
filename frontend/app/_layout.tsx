@@ -69,6 +69,8 @@ function RootLayoutNav({ onLayoutReady }: { onLayoutReady: () => void }) {
   );
 }
 
+import Toast from 'react-native-toast-message';
+
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -93,6 +95,7 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <RootLayoutNav onLayoutReady={() => setAppReady(true)} />
+      <Toast />
     </AppProvider>
   );
 }

@@ -14,7 +14,7 @@ import { useApp } from '../src/contexts/AppContext';
 const { width, height } = Dimensions.get('window');
 
 export default function Index() {
-  const { isLoggedIn, colors } = useApp();
+  const { isLoggedIn, hasSeenOnboarding, colors } = useApp();
   const [isReady, setIsReady] = useState(false);
 
   // Animations
@@ -259,10 +259,14 @@ export default function Index() {
     );
   }
 
-  if (isLoggedIn) {
-    return <Redirect href="/(tabs)/home" />;
-  } else {
-    return <Redirect href="/(auth)/welcome" />;
+  if (isReady) {
+    if (!hasSeenOnboarding) {
+      return <Redirect href="/onboarding" />;
+    } else if (isLoggedIn) {
+      return <Redirect href="/(tabs)/home" />;
+    } else {
+      return <Redirect href="/(auth)/welcome" />;
+    }
   }
 }
 

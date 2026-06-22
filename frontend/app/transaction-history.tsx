@@ -6,6 +6,8 @@ import { Typography } from '../src/components/Typography';
 import { Button } from '../src/components/Button';
 import { icons } from '../src/constants';
 import { api, resolveImageUrl } from '../src/services/api';
+import { SkeletonLoader } from '../src/components/SkeletonLoader';
+import { EmptyState } from '../src/components/EmptyState';
 
 export default function TransactionHistoryScreen() {
   const router = useRouter();
@@ -184,8 +186,11 @@ export default function TransactionHistoryScreen() {
 
       {/* Transaction List */}
       {loading ? (
-        <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ paddingHorizontal: 16 }}>
+          <SkeletonLoader height={120} borderRadius={16} style={{ marginBottom: 12 }} />
+          <SkeletonLoader height={120} borderRadius={16} style={{ marginBottom: 12 }} />
+          <SkeletonLoader height={120} borderRadius={16} style={{ marginBottom: 12 }} />
+          <SkeletonLoader height={120} borderRadius={16} style={{ marginBottom: 12 }} />
         </View>
       ) : (
         <FlatList
@@ -290,11 +295,14 @@ export default function TransactionHistoryScreen() {
             );
           }}
           ListEmptyComponent={
-            <View style={{ padding: 40, alignItems: 'center' }}>
-              <Typography variant="body1" color={colors.black3}>{t('no_transactions')}</Typography>
-            </View>
+            <EmptyState 
+              icon={icons.wallet}
+              title={t('no_transactions') as string || 'No transactions'}
+              description="You have no transactions that match this filter."
+              style={{ marginTop: 40 }}
+            />
           }
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
         />
       )}
 

@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { ServiceCard } from '../../src/components/ServiceCard';
+import { ServiceCardSkeleton } from '../../src/components/SkeletonLoader';
 import { AnimatedSearchPlaceholder } from '../../src/components/AnimatedSearchPlaceholder';
+import { BottomSheet } from '../../src/components/BottomSheet';
 import { icons } from '../../src/constants';
 import { api } from '../../src/services/api';
 
@@ -124,74 +126,89 @@ export default function Explore() {
         </TouchableOpacity>
       </View>
 
-      {showFilters && (
-        <View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterRow, { paddingBottom: 8 }]}>
-            {categories.map((cat) => (
-              <TouchableOpacity 
-                key={cat} 
-                style={[
-                  styles.categoryPill, 
-                  { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
-                ]}
-                onPress={() => {
-                  setActiveFilter(cat);
-                  handleSearch(query, cat, activePaymentFilter);
-                }}
-              >
-                <Typography variant="body2" color={activeFilter === cat ? '#FFF' : colors.black1}>{cat}</Typography>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-            {paymentFilters.map((pf) => (
-              <TouchableOpacity 
-                key={pf} 
-                style={[
-                  styles.categoryPill, 
-                  { backgroundColor: activePaymentFilter === pf ? colors.primary : colors.card, borderColor: colors.border }
-                ]}
-                onPress={() => {
-                  setActivePaymentFilter(pf);
-                  handleSearch(query, activeFilter, pf);
-                }}
-              >
-                <Typography variant="body2" color={activePaymentFilter === pf ? '#FFF' : colors.black1}>{pf}</Typography>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+
 
       <Typography variant="h5" style={styles.resultCount}>
         {t('found_services').replace('{count}', String(results.length))}
       </Typography>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {results.map((item) => (
-          <ServiceCard
-            key={item.id}
-            id={item.id}
-            title={item.title}
-            location={item.location}
-            price={item.price}
-            currency={item.currency}
-            priceType={item.price_type}
-            rating={item.rating}
-            imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
-            variant="horizontal"
-            isFeatured={!!item.is_featured}
-            isFavorited={!!item.is_favorited}
-            onToggleFavorite={() => handleToggleFavorite(item.id)}
-            holdupAmount={item.holdup_amount}
-          />
-        ))}
+        {loading ? (
+          <>
+            <ServiceCardSkeleton variant="horizontal" />
+            <ServiceCardSkeleton variant="horizontal" />
+            <ServiceCardSkeleton variant="horizontal" />
+            <ServiceCardSkeleton variant="horizontal" />
+            <ServiceCardSkeleton variant="horizontal" />
+          </>
+        ) : (
+          results.map((item) => (
+            <ServiceCard
+              key={item.id}
+              id={item.id}
+              title={item.title}
+              location={item.location}
+              price={item.price}
+              currency={item.currency}
+              priceType={item.price_type}
+              rating={item.rating}
+              imageUrl={item.images?.[0] || 'https://via.placeholder.com/400'}
+              variant="horizontal"
+              isFeatured={!!item.is_featured}
+              isFavorited={!!item.is_favorited}
+              onToggleFavorite={() => handleToggleFavorite(item.id)}
+              holdupAmount={item.holdup_amount}
+            />
+          ))
+        )}
         {results.length === 0 && !loading && (
           <View style={styles.empty}>
              <Typography variant="body1" color={colors.black2}>{t('no_results_desc')}</Typography>
           </View>
         )}
       </ScrollView>
+
+      <BottomSheet visible={showFilters} onClose={() => setShowFilters(false)} height={320}>
+        <Typography variant="h5" style={{ marginBottom: 16 }}>{t('filters') as string || 'Filters'}</Typography>
+        
+        <Typography variant="body1" weight="medium" style={{ marginBottom: 8, marginTop: 8 }}>{t('category') as string || 'Category'}</Typography>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterRow, { paddingBottom: 8 }]}>
+          {categories.map((cat) => (
+            <TouchableOpacity 
+              key={cat} 
+              style={[
+                styles.categoryPill, 
+                { backgroundColor: activeFilter === cat ? colors.primary : colors.card, borderColor: colors.border }
+              ]}
+              onPress={() => {
+                setActiveFilter(cat);
+                handleSearch(query, cat, activePaymentFilter);
+              }}
+            >
+              <Typography variant="body2" color={activeFilter === cat ? '#FFF' : colors.black1}>{cat}</Typography>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        
+        <Typography variant="body1" weight="medium" style={{ marginBottom: 8, marginTop: 16 }}>{t('payment_type') as string || 'Payment Type'}</Typography>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {paymentFilters.map((pf) => (
+            <TouchableOpacity 
+              key={pf} 
+              style={[
+                styles.categoryPill, 
+                { backgroundColor: activePaymentFilter === pf ? colors.primary : colors.card, borderColor: colors.border }
+              ]}
+              onPress={() => {
+                setActivePaymentFilter(pf);
+                handleSearch(query, activeFilter, pf);
+              }}
+            >
+              <Typography variant="body2" color={activePaymentFilter === pf ? '#FFF' : colors.black1}>{pf}</Typography>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }

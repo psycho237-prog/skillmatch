@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, Alert 
 import { useRouter } from 'expo-router';
 import { useApp } from '../src/contexts/AppContext';
 import { Typography } from '../src/components/Typography';
+import { EmptyState } from '../src/components/EmptyState';
 import { icons } from '../src/constants';
 
 export default function NotificationsScreen() {
@@ -97,15 +98,11 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Image source={icons.bell} style={{ width: 80, height: 80, tintColor: colors.primary, marginBottom: 16 }} />
-            <Typography variant="h5" color={colors.black2} style={{ marginBottom: 8 }}>
-              No notifications yet
-            </Typography>
-            <Typography variant="body2" color={colors.black3} align="center">
-              We'll notify you here when transaction updates and wallet deposits complete.
-            </Typography>
-          </View>
+          <EmptyState 
+            icon={icons.bell}
+            title="No notifications yet"
+            description="We'll notify you here when transaction updates and wallet deposits complete."
+          />
         }
         contentContainerStyle={{ paddingVertical: 16, paddingBottom: 40 }}
       />

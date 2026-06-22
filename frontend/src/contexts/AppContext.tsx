@@ -60,6 +60,9 @@ interface AppContextType {
   markAllNotificationsAsRead: () => Promise<void>;
   addNotification: (title: string, body: string) => Promise<void>;
 
+  hasSeenOnboarding: boolean;
+  setHasSeenOnboarding: (val: boolean) => Promise<void>;
+
   initialized: boolean;
 }
 
@@ -71,6 +74,7 @@ const STORAGE_KEYS = {
   THEME: '@skillmatch_theme',
   LANGUAGE: '@skillmatch_language',
   NOTIFICATIONS: '@skillmatch_notifications',
+  ONBOARDING: '@skillmatch_onboarding',
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -91,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLangState] = useState<Language>('en');
   const [notificationsEnabled, setNotifState] = useState(true);
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
+  const [hasSeenOnboarding, setHasSeenOnboardingState] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Load settings from storage on mount
@@ -206,13 +211,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadSettings = async () => {
     try {
-      const [storedUser, storedToken, storedTheme, storedLang, storedNotif, storedNotifList] = await Promise.all([
+      const [storedUser, storedToken, storedTheme, storedLang, storedNotif, storedNotifList, storedOnboarding] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USER),
         AsyncStorage.getItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
         AsyncStorage.getItem(STORAGE_KEYS.NOTIFICATIONS),
         AsyncStorage.getItem('@skillmatch_notifications_list'),
+        AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING),
       ]);
 
       if (storedUser) setUserState(JSON.parse(storedUser));
@@ -221,6 +227,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (storedLang) setLangState(storedLang as Language);
       if (storedNotif !== null) setNotifState(storedNotif === 'true');
       if (storedNotifList) setNotifications(JSON.parse(storedNotifList));
+      if (storedOnboarding === 'true') setHasSeenOnboardingState(true);
 
       setInitialized(true);
     } catch (e) {
@@ -299,6 +306,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Resolve theme
+  const setHasSeenOnboarding = async (val: boolean) => {
+    setHasSeenOnboardingState(val);
+    await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING, val ? 'true' : 'false');
+  };
+
   const theme: ThemeName =
     themePreference === 'system'
       ? (systemColorScheme === 'dark' ? 'dark' : 'light')
@@ -342,6 +354,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         markNotificationRead,
         markAllNotificationsAsRead,
         addNotification,
+        hasSeenOnboarding,
+        setHasSeenOnboarding,
         initialized,
       }}
     >

@@ -19,6 +19,7 @@ import { useApp } from '../../src/contexts/AppContext';
 import { api } from '../../src/services/api';
 import { icons } from '../../src/constants';
 import { CountryPicker } from '../../src/components/CountryPicker';
+import { EmptyState } from '../../src/components/EmptyState';
 
 export default function WalletScreen() {
   const { colors, user, t } = useApp();
@@ -233,7 +234,12 @@ export default function WalletScreen() {
       <View style={styles.historyContainer}>
         <Text style={[styles.sectionTitle, { color: colors.black1 }]}>{t('recent_transactions')}</Text>
         {history.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.black3 }]}>{t('no_transactions')}</Text>
+          <EmptyState 
+            icon={icons.wallet}
+            title={t('no_transactions') as string || 'No transactions'}
+            description="Your recent deposit and withdrawal history will appear here."
+            style={{ minHeight: 200, padding: 16 }}
+          />
         ) : (
           <FlatList
             data={history}

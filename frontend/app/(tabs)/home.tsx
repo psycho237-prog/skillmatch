@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../src/contexts/AppContext';
 import { Typography } from '../../src/components/Typography';
 import { ServiceCard } from '../../src/components/ServiceCard';
-import { Loader } from '../../src/components/Loader';
+import { SkeletonLoader, ServiceCardSkeleton } from '../../src/components/SkeletonLoader';
 import { AnimatedSearchPlaceholder } from '../../src/components/AnimatedSearchPlaceholder';
 import { icons } from '../../src/constants';
 import { api, resolveImageUrl } from '../../src/services/api';
@@ -184,7 +184,7 @@ export default function Home() {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
   const isHeaderHidden = useRef(false);
-  const HEADER_HIDE_HEIGHT = 68; // padding(10) + avatar(40) + margin(18)
+  const HEADER_HIDE_HEIGHT = 58; // avatar(40) + margin(18)
 
   const handleScroll = (e: any) => {
     const currentScrollY = e.nativeEvent.contentOffset.y;
@@ -332,7 +332,36 @@ export default function Home() {
         scrollEventThrottle={16}
       >
         <View>
-          {loading ? <Loader /> : (
+          {loading ? (
+            <View>
+              {/* Featured Skeleton Slider */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <SkeletonLoader width={100} height={28} />
+                  <SkeletonLoader width={60} height={20} />
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll} scrollEnabled={false}>
+                  <ServiceCardSkeleton variant="vertical" />
+                  <ServiceCardSkeleton variant="vertical" />
+                  <ServiceCardSkeleton variant="vertical" />
+                </ScrollView>
+              </View>
+
+              {/* Recommendation Grid Skeleton */}
+              <View style={[styles.section, { flex: 1, marginTop: 10 }]}>
+                <View style={styles.sectionHeader}>
+                  <SkeletonLoader width={150} height={28} />
+                  <SkeletonLoader width={60} height={20} />
+                </View>
+                <View style={styles.grid}>
+                  <ServiceCardSkeleton variant="grid" />
+                  <ServiceCardSkeleton variant="grid" />
+                  <ServiceCardSkeleton variant="grid" />
+                  <ServiceCardSkeleton variant="grid" />
+                </View>
+              </View>
+            </View>
+          ) : (
             <>
               {featured.length > 0 && renderFeaturedSlider()}
 
